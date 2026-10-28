@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.4",
-    "hono": "^4.13.13",
+    "hono": "^4.13.14",
     "node-html-parser": "^9.0.5",
     "pg": "^8.23.1"
   },
