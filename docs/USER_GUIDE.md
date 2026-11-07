@@ -117,3 +117,7 @@ The result shows the reason for each item and language that fails; the other one
 | *Too many requests to Supertext* | Wait a moment and click **Translate** again. Items already done show *Already translated, unchanged*. |
 | *Your Supertext translation limit is exceeded* | Your Supertext plan's volume is used up; tell your administrator. |
 | *This page has expired* | Open the app again from the dashboard's sidebar. |
+
+## Support
+
+Questions, problems or ideas: use the [Supertext support form](https://integrations.supertext.com/en/support?platform=wix). Mention the version of Wix and of the plugin, what you did and what you expected; an error message helps a lot. You get an answer by email, in your language.
