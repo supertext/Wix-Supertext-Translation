@@ -33,7 +33,7 @@ public/                   app.js (selection, start, polling, export download, im
 scripts/probe.ts          read-only look at a real site's Wix Multilingual data
 scripts/vendor-sdk.sh         refreshes src/vendor/supertext-sdk from the SDK repository
 scripts/vendor-plugin-health.sh  refreshes src/vendor/supertext-plugin-health from the Commando Center repository
-tests/                    Vitest tests; standin/ (Wix and Supertext stand-ins, sample site); docs/screenshots.ts
+tests/                    Vitest tests; standin/ (Wix and Supertext stand-ins, sample site); docs/screenshots.ts, docs/movie.ts, docs/movie-install.ts (kit in docs/movie/)
 ```
 
 ## How it fits into Wix
@@ -193,6 +193,25 @@ npm run docs:screenshots   # Playwright, 1× scale, into docs/images/
 ```
 
 `tests/docs/screenshots.ts` starts the stand-ins and the app in-process and captures the app's pages (no key yet, the language mapping with an unmapped language and Translation review ticked for German (the review service is a second stand-in address, never the real one), settings with the key check, translate page, results, list afterwards, overwrite warning, export for translation and the import summary after a round trip, German UI). Regenerate them in the same commit as any UI change they show. Chromium: Playwright's own (`npx playwright install chromium`) or `CHROME=/path/to/chrome`.
+
+## Demo movie
+
+`docs/images/demo.gif` (at the top of the README) is recorded by `tests/docs/movie.ts` with Supertext's shared movie kit (`tests/docs/movie/movie-kit.mjs`, its types in `movie-kit.d.mts`, and `assets/`: intro and outro cards, caption bar, cursor, cuts the waiting time; Inter under the SIL OFL, `assets/fonts/Inter-LICENSE.txt`). Like the screenshots, it starts the stand-in Wix and Supertext APIs and the app in-process (`tests/docs/movie/env.ts`; the Supertext stand-in holds its status answers for 2.5 s so the waiting state is visible, and the movie cuts the wait), saves a fake key off camera, then shows, with a spoken line for every step (the GIF is silent): the products of the sample store in English, *Dark chocolate praline box* ticked, German kept and French and Italian unticked, *Translate 1 item with Supertext*, the waiting state, the result (*Translated (4 fields)*, review in the *Translation Manager*) and the list with the product translated into German. Wix's own screens (the Translation Manager) aren't shown: the stand-in has no UI.
+
+```bash
+pip install piper-tts      # the voice (once)
+npm run docs:movie         # CHROME=/path/to/chrome as for the screenshots; MOVIE_PORT (default 8798)
+```
+
+The MP4 is narrated with [Piper](https://pypi.org/project/piper-tts/) (`pip install piper-tts`): the kit's `say()` speaks each step's line, shows its caption and holds until the line is finished; the time spent making the speech is cut. The voice model (63 MB, pinned revision, checked by SHA-256) downloads itself once into `tests/docs/movie/voice/` (git-ignored; never commit it). Without Piper, or with `MOVIE_VOICE=0`, the movie is made silent with the captions only.
+
+Voice: Piper voice “alba” (en_GB), trained on a dataset from the University of Edinburgh's Centre for Speech Technology Research, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+
+It needs `ffmpeg` and writes 1280×720 at 30 fps. The GIF (800 px, 12 fps, keep it under 3 MB) is committed; the MP4 (about 45 s) isn't: it goes to `tests/docs/movie/out/Wix-Supertext-Translation.mp4` (git-ignored) or to `MOVIE_OUT`. Record it again when the translate page changes. The kit is the same in every Supertext plugin repo: don't restyle it here.
+
+### Install movie
+
+`tests/docs/movie-install.ts` (`npm run docs:movie:install`) records the install and configuration movie with the same kit, voice and stand-ins (MP4 only, no GIF). A hosted app has no install commands, so there is no terminal scene, and adding the app to a site happens in Wix's own screens, which aren't shown (one spoken line sums it up, and one that the languages come from Wix Multilingual). It shows the app in the dashboard asking for a key, *Settings*: the API key field with the fake key `st-demo-0000-0000-0000` and where to get a key, *Languages* (English as the main language, German (Switzerland) → *German (Switzerland) (de-CH)*, *Translation review* left off), *Save* with the key check, *Test connection*, and the *Translate* tab where editors start. The MP4 (about 75 s) goes to `tests/docs/movie/out/Wix-Supertext-Translation-install.mp4` (git-ignored) or to `MOVIE_OUT`; it isn't committed. Record it again when the settings change.
 
 ## CI
 

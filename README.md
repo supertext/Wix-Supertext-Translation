@@ -2,6 +2,8 @@
 
 Translate your Wix site's content with [Supertext](https://www.supertext.com) AI, right from the Wix dashboard: Wix Stores products and categories, Wix Blog posts and other content that Wix Multilingual can translate. Pick the items and the languages, click **Translate with Supertext**, and review the result in Wix's Translation Manager.
 
+![Demo: a product picked on the Translate with Supertext page, German ticked, Translate 1 item with Supertext, and the product translated into German in Wix Multilingual](docs/images/demo.gif)
+
 > **Status: in development.** The app works against a stand-in of the Wix APIs (tests, screenshots). Testing on a real Wix site with Wix Stores and Wix Multilingual is the next step; see [Known limitations](docs/DEVELOPER.md#known-limitations--roadmap).
 
 ![The Translate with Supertext page: two products selected, German and French ticked](docs/images/translate-page.png)
