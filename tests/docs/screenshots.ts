@@ -15,7 +15,9 @@ import { chromium, type Locator, type Page } from 'playwright';
 import { signInstance } from '../../src/auth/instance.js';
 import { createApp } from '../../src/app.js';
 import { loadConfig } from '../../src/config.js';
+import { translator } from '../../src/i18n/index.js';
 import { MemoryStore } from '../../src/store/store.js';
+import { formatTime } from '../../src/views/layout.js';
 import { createSupertextStandin } from '../standin/supertext.js';
 import { createWixStandin } from '../standin/wix.js';
 
@@ -86,6 +88,10 @@ async function main() {
   await page.waitForSelector('.key-check[data-status="ok"]');
   await page.click('#test-button');
   await page.waitForSelector('#test-result.ok');
+  // The key check's time changes with every run: show a fixed one, so the image only
+  // changes when the page does.
+  const checkedAt = translator('en').t('keyCheck.checkedAt', { time: formatTime('2026-10-01T09:00:00Z', 'en') });
+  await page.locator('.key-check p.muted').evaluateAll((nodes, text) => nodes.forEach((node) => (node.textContent = text)), checkedAt);
   await shot('settings', page.locator('main'));
 
   // Translate page: products selected.

@@ -216,6 +216,32 @@ It needs `ffmpeg` and writes 1280×720 at 30 fps. The GIF (800 px, 12 fps, keep 
 ## CI
 
 `.github/workflows/ci.yml`: typecheck, tests, build, then a smoke test of the built app against the stand-ins (dashboard page, a job translating two products into two languages, a forged instance refused).
+`.github/workflows/checks.yml` and `links.yml` lint the workflows and check the links. `.github/workflows/e2e.yml` runs the app's Docker image against the real Supertext API and regenerates the docs screenshots (see *End-to-end tests*).
+
+## End-to-end tests
+
+The unit tests and CI use stand-ins for both APIs. `.github/workflows/e2e.yml` also tests against the **real Supertext API**, so changes on Supertext's side (language codes, regional variants, formatting, rate limits) show up. It runs on every push to `main` that touches the app, the Dockerfile or the tests, on pull requests that change the E2E test or workflow, every Monday at 06:10 UTC, and by hand (*Actions → E2E → Run workflow*).
+
+There is **no real Wix site in CI** (Wix sites can't be created or seeded from outside, and the app's Wix calls need an installed app instance). So Wix is the stand-in (`tests/standin/wix.ts` with the sample site of `seed.ts`: two products, a category with a German name translated by hand, a blog post; English with German, French and Italian (Switzerland)), and the app is the image Railway builds (`Dockerfile`, Docker layer cache in GitHub Actions) with a Postgres database and an app secret made up for the run. The dashboard page is opened the way Wix opens it, with an instance signed with that secret (as in the screenshot script).
+
+1. **Real API** (repository or organization secret `SUPERTEXT_API_KEY`; without it these steps are skipped with a warning). Version reports are off (`SUPERTEXT_VERSION_REPORTS=0`), so CI runs don't appear in the Commando Center.
+   - `tests/e2e/features.mjs` asks the live `GET features` (cost-free, no app or SDK code) whether every pair the sample site translates (`en` → `de-CH`, `fr-CH`, `it-CH`) is offered; a missing pair fails the run.
+   - `tests/e2e/live.ts` (Playwright, run with `tsx`) serves the Wix stand-in on port 8766 (`WIX_API_BASE` of the app), opens the translate page and, for every content type, selects all items and all languages and clicks *Translate*. Then it checks what the stand-in Wix received: one translation content per item and language, every translated field filled, published and marked `EXTERNAL_APP` (the default setting), at least 80 % of the fields changed (single words may stay the same), no `data-st-*` or other protocol markup, rich text with the same blocks (heading, paragraphs, list items), its bold, italics and links (same URL) kept and no HTML in the text runs, HTML fields with their tags, the text in the target language (common words of each language counted), de-CH without "ß", the hand-made German category name kept, and every item shown as translated in the list. Translating again without *overwrite* must change nothing (all items "Already translated, unchanged"); with *overwrite* every item is translated again into the same contents (updated by key, no new contents, no duplicates), the hand-made name included. Errors shown on the page fail the test. Each run translates the sample site twice into three languages (around 6,000 characters on the key's account).
+2. **Stand-in APIs**: the docs screenshots (`npm run docs:screenshots`, see *Screenshots*), so the images don't change with each machine translation. If `docs/images/` changed, a second job pushes the branch `automation/docs-screenshots` and opens (or updates) the pull request "Docs: regenerate screenshots". This needs *Settings → Actions → General → Allow GitHub Actions to create and approve pull requests*.
+
+What this can't test without a real Wix site: Wix's own API behaviour (OAuth, field keys of real schemas, the Translation Content API's answers and limits), the app inside the Wix dashboard iFrame and a collaborator's permissions. Check those on the demo site (see *Demo*) and with `npm run wix:probe`.
+
+If a run fails, the artifact `e2e-debug` has the result pages (`tests/e2e/artifacts/`) and the app's log. Locally (any free ports):
+
+```bash
+SUPERTEXT_API_KEY=… E2E_TARGETS=de-CH,fr-CH,it-CH node tests/e2e/features.mjs
+npm run build
+PORT=8081 WIX_APP_ID=e2e WIX_APP_SECRET=local-secret WIX_API_BASE=http://127.0.0.1:8766 \
+  SUPERTEXT_API_KEY=… SUPERTEXT_VERSION_REPORTS=0 node dist/server.js &
+APP_URL=http://127.0.0.1:8081 WIX_APP_SECRET=local-secret npx tsx tests/e2e/live.ts
+```
+
+The stand-in starts with the untranslated sample site on every run, so `live.ts` can run again against the same app. `live.ts` also passes against the stand-in Supertext API, which is how to try changes without a key: start the app with `SUPERTEXT_API_ENDPOINT=http://127.0.0.1:8765/v1/ SUPERTEXT_REPORT_URL=http://127.0.0.1:8765/report` and run `live.ts` with `SUPERTEXT_STANDIN_PORT=8765`. `CHROME=/path/to/chrome` uses another Chromium.
 
 ## Hosting (Railway)
 
