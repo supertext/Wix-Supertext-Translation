@@ -16,23 +16,24 @@ src/
   wix/ricos.ts            Ricos rich content ↔ HTML segments
   translation/
     fields.ts             which fields are translated; item state per language
-    translate.ts          one item × one language: plan → Supertext → write back
+    translate.ts          one item × one language: collectSegments → Supertext → buildFields/saveFields
+    files.ts              translation files: export, import, reference format (SDK TranslationFiles)
     jobs.ts               a job: items × languages, progress, error handling
     site.ts               languages, translatable schemas, list pages for the translate page
     language-codes.ts     Wix locale → Supertext code (the site's mapping, else an exact code; SDK's Languages)
-  supertext/index.ts      the Supertext SDK with this app's defaults (User-Agent, stand-in endpoint)
+  supertext/index.ts      the Supertext SDK with this app's defaults (User-Agent, stand-in endpoint, REVIEW_URL)
   vendor/supertext-sdk/   the Supertext SDK for TypeScript, vendored (don't edit; see "Supertext SDK")
   vendor/supertext-plugin-health/  Supertext Plugin Health for TypeScript, vendored (don't edit; see "Supertext Plugin Health")
   store/
     store.ts              Store interface, in-memory store, AES-GCM for API keys
     postgres.ts           PostgreSQL store (creates its database and tables)
   i18n/                   en, de, fr, it messages; translator; LocalizedError
-  views/                  server-rendered pages (hono/jsx): translate, job panel, settings
-public/                   app.js (selection, start, polling, test connection), app.css
+  views/                  server-rendered pages (hono/jsx): translate (with the export and import cards), job panel, import summary, settings
+public/                   app.js (selection, start, polling, export download, import upload, test connection), app.css (Supertext's look, see "Look and feel"), supertext-logo.svg, favicon.svg, fonts/ (Inter, SIL Open Font License)
 scripts/probe.ts          read-only look at a real site's Wix Multilingual data
 scripts/vendor-sdk.sh         refreshes src/vendor/supertext-sdk from the SDK repository
 scripts/vendor-plugin-health.sh  refreshes src/vendor/supertext-plugin-health from the Commando Center repository
-tests/                    Vitest tests; standin/ (Wix and Supertext stand-ins, sample site); docs/screenshots.ts; e2e/ (real Supertext API)
+tests/                    Vitest tests; standin/ (Wix and Supertext stand-ins, sample site); docs/screenshots.ts, docs/movie.ts, docs/movie-install.ts (kit in docs/movie/)
 ```
 
 ## How it fits into Wix
@@ -66,6 +67,14 @@ HTTP 429 from Wix is retried like Supertext's (up to 4 times). Errors become `Wi
    - **Write back** (`WixClient.saveContent`): if the item already has translation content in that locale, *Bulk Update Content By Key* (`schemaId` + `entityId` + `locale`; only the fields sent change); if not, *Create Content*. Update by key only works on content that exists: on a real site it answers *Entity not found* for a new translation. If Wix disagrees with what the list showed (not found on update, already exists on create), the other call follows. Each field goes with `published` (setting *Mark translations as ready to publish*) and `updatedBy: EXTERNAL_APP`. A text longer than the schema field's `maxLength` isn't written (*too long for Wix*). If Supertext returns fewer segments than sent, the SDK fails with `incomplete_response` and nothing is written for that item.
 4. Errors: authentication, limit, missing Wix Multilingual or Wix permission errors stop the job (a 401/403 from Supertext also tells the Commando Center's key check, see below); `unsupported_language`, `unsupported_feature` and `INVALID_LANGUAGE_PAIR` skip that language for the rest of the job; a main language without a Supertext language stops the job; anything else fails only that item. Jobs still running when the app restarts are marked *interrupted* on the next start.
 
+### Translation files (XLIFF and HTML)
+
+*Export for translation* and *Import translation* (cards on the translate page, `public/app.js`) use the SDK's `TranslationFiles` (SDK 0.5.0, version-neutral, re-exported by `src/supertext/index.ts`). Glue: `src/translation/files.ts`; routes `POST /api/files/export` (JSON → the file) and `POST /api/files/import` (multipart → JSON with the summaries and the summary rendered by `views/files.tsx`), both behind `X-Wix-Instance` like every API call.
+
+- **Segments:** `collectSegments` in `translate.ts`, shared with the API translation: one per text/HTML field (key = the Wix field key, e.g. `name`, `choice(small)`), one per Ricos text block (key = `<field key>#<n>`). The API path sends the same keys to `translateTexts`. The export collects with *overwrite* (every field, translated ones too); the import collects with the import's *overwrite* option, so fields with a translation are *kept* as in a job.
+- **Job metadata:** `plugin` = `Wix-Supertext-Translation`; `reference` = `<schema id>:<entity id>:<Wix locale>` (`fileReference` / `parseReference`; ids, never titles); `sourceLanguage`/`targetLanguage` = the site's mapping (`sourceCodeOf`/`targetCodeOf`), else the Wix code with `_` → `-`, so unmapped languages never block an export. XLIFF: one job per locale in one file; HTML: exactly one. File name `wix-<entity id>-<target>.xlf|.html` (`wix-<entity id>.xlf` for several), `application/x-xliff+xml` / `text/html; charset=utf-8`, `Content-Disposition: attachment`; the script saves the response as a blob (the instance header can't go with a plain link).
+- **Import:** `refuseLargeUpload` checks `Content-Length` before the body is parsed and the file's size (10 MB); nothing is stored. `TranslationFiles.read` errors become `file_invalid` / `file_missing_metadata` / `file_too_large`; per job: other `plugin` → `file_other_system`, unparsable reference, unknown schema or no source content → `file_item_gone`, a locale the site doesn't have as a target → `file_no_language`. Then `importTranslations(file, collected.segments)`; `ok` (and `source_changed` with *Also import texts whose source changed*) go through `buildFields` + `saveFields`, the API path's write-back (create or update by key, `published` from the setting, `updatedBy: EXTERNAL_APP`, `maxLength`). A Ricos field is written only when all its blocks have a translation (`rebuild` would leave the others in the source language); its translated blocks count as *not written*. `untranslated`, `invalid_markup`, `missing` are counted, never written.
+
 ### Ricos rich content
 
 Every block whose children are all `TEXT` nodes (paragraphs, headings, the paragraphs inside list items, quotes, table cells, collapsible items …) becomes one segment, as the shared rule requires (a whole paragraph per `data-st-id`). Each text run's decorations become an inline tag carrying `data-st-d` = the index of its decoration set: `<a href>` for links, `<b>`/`<i>`/`<u>` for plain bold/italic/underline, `<span>` for anything else (colours, font sizes, mentions …). Line breaks travel as `<br>`. After translation the runs are rebuilt from the tags (nested tags combine their decorations), so formatting survives reordering. Button labels (`buttonData.text`) and image alt texts (`imageData.altText`) are plain-text segments; `CODE_BLOCK` isn't translated. Node IDs and all other data stay as they were.
@@ -73,6 +82,10 @@ Every block whose children are all `TEXT` nodes (paragraphs, headings, the parag
 ## Interface languages
 
 English, German, French and Italian, following the `locale` parameter Wix adds to the dashboard page (the browser's language, e.g. `de`), then `Accept-Language`, then English. Strings live in `src/i18n/{en,de,fr,it}.ts`; `en.ts` defines the keys and the others are typed `Messages`, so a missing key fails `npm run typecheck`, and `tests/i18n.test.ts` checks placeholders, URLs, "Supertext" and "Wix". **Every new or changed string gets all four languages in the same commit**, formal address (Sie, vous, Lei), Wix's own terms (*Übersetzungsmanager*, *Gestionnaire de traduction*, *Gestione traduzioni*; *Website*, *langue principale*), French ` ` before `? ! : ;`. Errors are `LocalizedError`s (English message for logs, `code` → `error.<code>`); Supertext errors use the SDK's codes as they are (`error.authentication_failure`, `error.quota_exceeded` …; `errorInfo()` in `src/i18n/error.ts` turns a `SupertextError` into the message data, and an `invalid_language_pair` without the codes into `invalid_language_pair_unknown`). The job panel is rendered on the server in the requested language.
+
+## Look and feel
+
+The pages follow supertext.com, like Supertext's HubSpot app: a compact deep-green header bar (`#003230`, rounded bottom corners, 50 px high because it sits right below Wix's own dashboard bar) with Supertext's mint logo (`public/supertext-logo.svg`, the website's own SVG) and pill-shaped tabs, the warm off-white background (`#f7f5f3`), deep-green text and outlines, mint (`#78ffaf`) for the main action, the active tab, selected languages and finished translations, light grey lines (`#dfe1df`), and pill-shaped buttons. Text is set in Inter, bundled in `public/fonts/` (variable font, Latin and Latin Extended; SIL Open Font License in `Inter-LICENSE.txt`), so no font is loaded from elsewhere. Supertext's heading font (ABC Ginto Nord) is licensed and not bundled; headings use Inter Bold. The colours are CSS variables at the top of `public/app.css`; keyboard focus shows a deep-green outline. Below 640 px the header, cards and buttons tighten and the item table scrolls inside its card. The favicon is the logo's S mark on deep green.
 
 ## Supertext API protocol
 
@@ -87,14 +100,14 @@ All of this is done by the **Supertext SDK** (next section): header `Authorizati
 
 ### Supertext SDK
 
-The app uses the TypeScript SDK from [Supertext-API-SDK-and-Guide](https://github.com/Supertext/Supertext-API-SDK-and-Guide) (`sdk/typescript`, 0.3.0), the shared client of all Supertext plugins. It provides the API client and the API key check (`checkApiKey()`, `apiKeyFingerprint()`, `SDK_VERSION`); version reports come from Supertext Plugin Health (next section). It isn't on npm yet, so it is **vendored** in `src/vendor/supertext-sdk/` (its source tree as it is: the version-neutral `index.ts` and `version.ts`, the API in `v1/`; with `LICENSE`, `COMMIT` = the SDK commit, `VERSION` and a `README.md`). Don't edit those files: fix the SDK upstream, then
+The app uses the TypeScript SDK from [Supertext-API-SDK-and-Guide](https://github.com/Supertext/Supertext-API-SDK-and-Guide) (`sdk/typescript`, 0.5.0), the shared client of all Supertext plugins. It provides the API client and the API key check (`checkApiKey()`, `apiKeyFingerprint()`, `SDK_VERSION`); version reports come from Supertext Plugin Health (next section). It isn't on npm yet, so it is **vendored** in `src/vendor/supertext-sdk/` (its source tree as it is: the version-neutral `index.ts` and `version.ts`, the API in `v1/`; with `LICENSE`, `COMMIT` = the SDK commit, `VERSION` and a `README.md`). Don't edit those files: fix the SDK upstream, then
 
 ```bash
 scripts/vendor-sdk.sh [commit-or-branch]   # default: main; SDK_DIR=/path/to/clone uses a local clone as it is
 npm run typecheck && npm test
 ```
 
-The app reaches the SDK only through `src/supertext/index.ts` (imports from `v1/`), so moving to the npm package later means replacing the folder with `npm install supertext-sdk` and changing that import to `supertext-sdk/v1`.
+The app reaches the SDK only through `src/supertext/index.ts` (imports from `v1/`, and `TranslationFiles` from the version-neutral `index.ts`), so moving to the npm package later means replacing the folder with `npm install supertext-sdk` and changing those imports to `supertext-sdk/v1` and `supertext-sdk`.
 
 ### Supertext Plugin Health
 
@@ -109,13 +122,18 @@ npm run typecheck && npm test
 
 Supertext accepts exactly the codes its `GET features` lists (the SDK's `Languages`, `src/vendor/supertext-sdk/v1/languages.ts`): **sources** bare (`en`, `de`, `gsw` …); **targets** regional only for de/en/fr/it/pt (`de-CH`, `de-DE`, `de-AT`, `en-US`, `en-GB`, `fr-CH`, `fr-FR`, `it-CH`, `it-IT`, `pt-BR`, `pt-PT`), with a script for Chinese and Serbian (`zh-Hans`, `zh-Hant`, `sr-Latn`, `sr-Cyrl`), `gsw-u-sd-chzh`/`gsw-u-sd-chbe` for Swiss German, and bare for all others (`es`, `nl`, `sl`, `ja` …). Anything else gets HTTP 404 `INVALID_LANGUAGE_PAIR`.
 
-**No guessing, no default regions.** `src/translation/language-codes.ts` resolves a Wix locale with `Languages.target()` / `Languages.source()`:
+**No guessing beyond the SDK's defaults.** `src/translation/language-codes.ts` resolves a Wix locale with `Languages.target()` / `Languages.source()`:
 
 1. the site's **mapping** (`SiteSettings.languageCodes`, Wix locale ID → Supertext code, column `language_codes`): one mapping serves both directions; for the main language a mapped code is sent in its source form (`de-CH` → `de`);
 2. else an **exact match** of the locale ID (case and `_`/`-` ignored: `de-ch` → `de-CH`, `es` → `es`; for the source also its first subtag: `en-US` → `en`);
-3. else the SDK's `unsupported_language`: nothing is sent. The job item says *"German" has no Supertext language yet … Settings → Languages*, in the editor's language.
+3. else, for targets, the SDK's **default** (`Languages.defaultTarget`, `DEFAULT_TARGETS`, SDK 0.4.0): `de` → `de-DE`, `en` → `en-US`, `fr` → `fr-FR`, `it` → `it-IT`, `pt` → `pt-PT`, `zh`/`zh-CN`/`zh-SG` → `zh-Hans`, `zh-TW`/`zh-HK`/`zh-MO` → `zh-Hant`, `sr` → `sr-Latn`, a region of a bare target → the bare target (`es-ES` → `es`);
+4. else the SDK's `unsupported_language`: nothing is sent. The job item says *"Swiss German" has no Supertext language yet … Settings → Languages*, in the editor's language. Locales without a default (`en-IE`, `de-LI`, `fr-BE`, `sr-RS`, `gsw`) need a mapping.
 
-So a Wix locale `de` (Wix sites often have bare languages) must be mapped (`de-CH`, `de-DE` or `de-AT`); `zh-CN` must be mapped to `zh-Hans`. The settings page (**Languages**) has one select per site language: empty = the exact code if there is one (*Same code: de-CH*), else *Not translated: choose a Supertext language*; the options are `Languages.SOURCES` for the main language and `Languages.TARGETS` for the others, named in the interface language (`Intl.DisplayNames`). A warning lists the languages without a Supertext language; the translate page leaves them unchecked and links to the settings. Only codes Supertext offers are saved (in their exact form); others are reported as *Saved, except these language codes …*. The form of address hint names the languages where formal/informal isn't available.
+The settings page (**Languages**) has one combo box per site language, the main language included: the saved code selected, else the suggestion (`Languages.suggestTarget()` = exact match, else default; for the main language its source code), else *— Not translated: choose a Supertext language —*. The options are `Languages.SOURCES` for the main language and `Languages.targetOptions()` for the others, shown as *Name (code)* with the name in the interface language (`Intl.DisplayNames`) and sorted by it. Saving stores the selected code of every row, so a preselected default becomes the saved choice (the stored format didn't change, so earlier mappings stay as they are). A warning lists only the languages without mapping and without default; the translate page leaves those unchecked and links to the settings; all others are ticked. Only codes Supertext offers are saved (in their exact form); others are reported as *Saved, except these language codes …*. The form of address hint names the languages where formal/informal isn't available.
+
+### Translation review
+
+`SiteSettings.reviewLocales` (column `review_locales`, JSONB array of Wix locale IDs, `[]` for existing rows; checkbox `review:<locale>` next to each target's combo box under Settings → Languages, off by default) lists the target languages translated through Supertext's review service, the translation proxy of [Supertext Localization Review](https://github.com/Supertext/Localization-Review-Supertext-Translation). It speaks the same API v1, forwards to the live Supertext API with the site's key, stores every segment per key and serves reviewers' corrections on the next upload, so nothing else in the protocol changes. `runJob` asks `JobDeps.supertext(settings, review)` for each locale and keeps at most two clients per job (direct, review), created lazily; `translateTexts` uploads, polls, downloads and deletes with the same client, so a job is always collected where it was submitted. In `app.ts` the review client is `createSupertextClient` with the same key, User-Agent and fetch and `endpoint` = `SUPERTEXT_REVIEW_URL` (default `REVIEW_URL` in `src/supertext/index.ts`, `https://localizationreview-production.up.railway.app/v1/`). `effectiveReviewUrl()` makes it `''` when the variable is set to `''` or equals the normal endpoint (then no second client; the checkboxes are disabled and the saved choices kept). The key check, version reports and translation files never use the review service. Tests: `tests/flow.test.ts` → *translation review* (a review language's upload, status, download and delete go to the review stand-in host `review.test`, the others to `supertext.test`; `SUPERTEXT_REVIEW_URL=''` turns it off; the default is `REVIEW_URL`; the key check stays direct; the checkbox is saved per target only).
 
 The stand-in (`tests/standin/supertext.ts`) accepts only the listed target codes (HTTP 404 otherwise) and answers `politeness` for a target without it with HTTP 400 `FEATURE_ERROR`, like the live API.
 
@@ -135,7 +153,7 @@ Protocol: [Commando-Center-Supertext-Translation](https://github.com/Supertext/C
 
 ## Local development
 
-Requirements: Node.js 22.12+. No Wix account needed for most work: the stand-ins answer like the Wix and Supertext APIs for a sample site (`tests/standin/seed.ts`: a Swiss chocolate shop in English with German, French and Italian, two products, a category, a blog post; `samples.json` holds human translations of its texts).
+Requirements: Node.js 22.12+ (CI runs the tests on Node 22, 24 and 26; the Docker image uses Node 22). No Wix account needed for most work: the stand-ins answer like the Wix and Supertext APIs for a sample site (`tests/standin/seed.ts`: a Swiss chocolate shop in English with German, French and Italian, two products, a category, a blog post; `samples.json` holds human translations of its texts).
 
 ```bash
 npm install
@@ -161,12 +179,12 @@ Read-only. Prints the site's URL and ID (what the version reports use), lists th
 ## Tests
 
 ```bash
-npm test             # Vitest: instance signing, Ricos round trip, field selection, Wix client, i18n, language codes, reporting, full flow (the SDK has its own tests upstream)
+npm test             # Vitest: instance signing, Ricos round trip, field selection, Wix client, i18n, language codes, reporting, full flow, translation files (the SDK has its own tests upstream)
 npm run typecheck
 npm run build
 ```
 
-`tests/flow.test.ts` runs the whole app (`createApp`) against the stand-ins with an in-memory store: the translate page, jobs, overwrite, settings, the language mapping, unsupported languages and politeness, language-pair and authentication errors, the key check and the reports (to the stand-in's `/report`), encrypted keys. `tests/languages.test.ts` covers the language rules, `tests/reporting.test.ts` the reporting glue with a fake transport (site URL, off switches, failure back-off, never throwing).
+`tests/flow.test.ts` runs the whole app (`createApp`) against the stand-ins with an in-memory store: the translate page, jobs, overwrite, settings, the language mapping, Translation review, unsupported languages and politeness, language-pair and authentication errors, the key check and the reports (to the stand-in's `/report`), encrypted keys. `tests/languages.test.ts` covers the language rules, `tests/reporting.test.ts` the reporting glue with a fake transport (site URL, off switches, failure back-off, never throwing). `tests/files.test.ts` exports and imports through the routes against the stand-ins: reference round trip, keys and codes, every import outcome, rich text with missing blocks, upload size.
 
 ## Screenshots
 
@@ -174,7 +192,26 @@ npm run build
 npm run docs:screenshots   # Playwright, 1× scale, into docs/images/
 ```
 
-`tests/docs/screenshots.ts` starts the stand-ins and the app in-process and captures the app's pages (no key yet, the language mapping with an unmapped language, settings with the key check, translate page, results, list afterwards, overwrite warning, German UI). Regenerate them in the same commit as any UI change they show. The time of the last key check is shown as a fixed date, so the images only change when the pages do. The E2E workflow also takes them on every run and opens a pull request when they differ (see *End-to-end tests*). Chromium: Playwright's own (`npx playwright install chromium`) or `CHROME=/path/to/chrome`.
+`tests/docs/screenshots.ts` starts the stand-ins and the app in-process and captures the app's pages (no key yet, the language mapping with an unmapped language and Translation review ticked for German (the review service is a second stand-in address, never the real one), settings with the key check, translate page, results, list afterwards, overwrite warning, export for translation and the import summary after a round trip, German UI). Regenerate them in the same commit as any UI change they show. Chromium: Playwright's own (`npx playwright install chromium`) or `CHROME=/path/to/chrome`.
+
+## Demo movie
+
+`docs/images/demo.gif` (at the top of the README) is recorded by `tests/docs/movie.ts` with Supertext's shared movie kit (`tests/docs/movie/movie-kit.mjs`, its types in `movie-kit.d.mts`, and `assets/`: intro and outro cards, caption bar, cursor, cuts the waiting time; Inter under the SIL OFL, `assets/fonts/Inter-LICENSE.txt`). Like the screenshots, it starts the stand-in Wix and Supertext APIs and the app in-process (`tests/docs/movie/env.ts`; the Supertext stand-in holds its status answers for 2.5 s so the waiting state is visible, and the movie cuts the wait), saves a fake key off camera, then shows, with a spoken line for every step (the GIF is silent): the products of the sample store in English, *Dark chocolate praline box* ticked, German kept and French and Italian unticked, *Translate 1 item with Supertext*, the waiting state, the result (*Translated (4 fields)*, review in the *Translation Manager*) and the list with the product translated into German. Wix's own screens (the Translation Manager) aren't shown: the stand-in has no UI.
+
+```bash
+pip install piper-tts      # the voice (once)
+npm run docs:movie         # CHROME=/path/to/chrome as for the screenshots; MOVIE_PORT (default 8798)
+```
+
+The MP4 is narrated with [Piper](https://pypi.org/project/piper-tts/) (`pip install piper-tts`): the kit's `say()` speaks each step's line, shows its caption and holds until the line is finished; the time spent making the speech is cut. The voice model (63 MB, pinned revision, checked by SHA-256) downloads itself once into `tests/docs/movie/voice/` (git-ignored; never commit it). Without Piper, or with `MOVIE_VOICE=0`, the movie is made silent with the captions only.
+
+Voice: Piper voice “alba” (en_GB), trained on a dataset from the University of Edinburgh's Centre for Speech Technology Research, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+
+It needs `ffmpeg` and writes 1280×720 at 30 fps. The GIF (800 px, 12 fps, keep it under 3 MB) is committed; the MP4 (about 45 s) isn't: it goes to `tests/docs/movie/out/Wix-Supertext-Translation.mp4` (git-ignored) or to `MOVIE_OUT`. Record it again when the translate page changes. The kit is the same in every Supertext plugin repo: don't restyle it here.
+
+### Install movie
+
+`tests/docs/movie-install.ts` (`npm run docs:movie:install`) records the install and configuration movie with the same kit, voice and stand-ins (MP4 only, no GIF). A hosted app has no install commands, so there is no terminal scene, and adding the app to a site happens in Wix's own screens, which aren't shown (one spoken line sums it up, and one that the languages come from Wix Multilingual). It shows the app in the dashboard asking for a key, *Settings*: the API key field with the fake key `st-demo-0000-0000-0000` and where to get a key, *Languages* (English as the main language, German (Switzerland) → *German (Switzerland) (de-CH)*, *Translation review* left off), *Save* with the key check, *Test connection*, and the *Translate* tab where editors start. The MP4 (about 75 s) goes to `tests/docs/movie/out/Wix-Supertext-Translation-install.mp4` (git-ignored) or to `MOVIE_OUT`; it isn't committed. Record it again when the settings change.
 
 ## CI
 
@@ -218,6 +255,7 @@ The service **Wix** in the Railway project *supertext-cms-demos* builds this rep
 | `DATABASE_URL` | the shared Postgres service's URL with database `wix_supertext` (created on first start) |
 | `APP_ENCRYPTION_KEY` | random secret for stored API keys; optional (falls back to the app secret) |
 | `SUPERTEXT_API_KEY` | optional default key (the demo site) |
+| `SUPERTEXT_REVIEW_URL` | optional: another review service than Supertext's for languages with *Translation review* (unset: `REVIEW_URL`); `''` turns review off for all sites. Only with the live API: leave it `''` when `SUPERTEXT_API_ENDPOINT` points at staging or testing |
 | `SUPERTEXT_VERSION_REPORTS` | optional: `0` turns version reports off for all sites (default: each site's setting, on) |
 | `SUPERTEXT_REPORT_URL` | never in production (Plugin Health's default is the live Commando Center); tests point it at a stand-in |
 
@@ -247,7 +285,7 @@ The demo is a Wix site, not a container: Wix hosts the site, Railway only the ap
 
 Dependabot (`.github/dependabot.yml`) opens weekly pull requests: minor and patch updates grouped into one, GitHub Actions in another, each major update on its own. Merge one when CI is green and it doesn't change what the app supports.
 
-Some major versions are ignored on purpose: TypeScript (7.x is the native compiler; stay on 5.x until the type-checking and build tooling here is moved to it) and `@types/node` (the types must match the oldest Node version the app supports, Node 22, not the newest). Lift an ignore rule when the app moves to the new version.
+One major version is ignored on purpose: `@types/node` (the types must match the oldest Node version the app supports, Node 22, not the newest). Lift the ignore rule when the app moves to a new minimum Node version.
 
 ## Code quality and security checks
 
@@ -255,6 +293,7 @@ Some major versions are ignored on purpose: TypeScript (7.x is the native compil
 - **Links** workflow (`.github/workflows/links.yml`): [lychee](https://lychee.cli.rs/) checks the links in all Markdown files weekly and whenever docs change on `main`. Broken links open (or update) the issue "Broken links in the docs". Links that can't work from CI (local URLs, placeholders, pages behind a login) are excluded in `.lycheeignore`.
 - JavaScript and TypeScript are analysed by CodeQL (see below), so this repo runs no separate static analyser.
 - GitHub settings (set by Remy's setup script, not stored in the repo): **secret scanning with push protection** (a push containing a known token format is rejected; findings under *Security → Secret scanning*) and **CodeQL default setup** (findings under *Security → Code scanning* and as comments on pull requests; PHP isn't covered by CodeQL, which is why the PHP plugins run PHPStan).
+- `.github/workflows/support-triage.yml`: support requests from the Supertext integrations website arrive as issues labelled `support` (contact details stay in the Supertext CMS). Claude classifies each one: answers questions (marked `<!-- supertext:reply -->`, emailed to the sender by the CMS) and closes them, fixes bugs as pull requests for review (never merged automatically), labels feature requests `feature-request`. Only people with triage rights can add labels, so outsiders can't start it. Needs the organisation secret `ANTHROPIC_API_KEY`; the workflow is the same in every Supertext repo.
 
 Before starting work in this repo, look at its open findings: code scanning alerts, secret scanning alerts, Dependabot PRs and the "Broken links in the docs" issue.
 
@@ -273,6 +312,7 @@ Never tag or create releases by hand. Changes to permissions or extensions are m
 - **First test on a real Wix site (October 2026, Wix Stores test site):** the app is installed, reads the site's locales (bare languages there, e.g. `de`, `fr`), lists the Wix Stores products from Translation Content in the main language and translates them with Supertext. Writing a *new* translation with *Update Content By Key* failed with *Entity not found*, hence *Create Content* for new translations. Still to confirm on the site: that creating translations in Wix Stores' schemas is allowed and shows up in the Translation Manager and on the live site, and Wix Blog.
 - Screenshots of Wix's own screens (Wix Multilingual's language setup, the Translation Manager with a translated product) follow once the demo site exists; the guides show the app's pages from the stand-ins until then.
 - Version reports: `GET /apps/v1/instance` (the site URL) is tried against the stand-in only so far; check on the test site that it answers without an extra permission and returns `site.url` (`npm run wix:probe`). Until then a failing call only means no report.
+- A translation memory and reviewers' corrections come from the review service only for languages with *Translation review* on; corrections reach Wix only with the next translation (with *Overwrite existing translations*; no push).
 - Jobs run inside the web process (one Railway instance); a restart marks a running job *interrupted*. A queue comes later.
 - Up to 25 items per page and 100 per job; "translate everything" comes later.
 - No translation of the Wix Editor's own pages and texts (Wix Multilingual handles those in the Editor).

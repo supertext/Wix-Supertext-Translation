@@ -15,11 +15,16 @@ export function setup(env: Record<string, string> = {}) {
   const wix = createWixStandin();
   const supertext = createSupertextStandin();
   const store = new MemoryStore();
+  /** Supertext requests by host: `supertext.test` (direct) and `review.test` (the review service stand-in). */
+  const supertextCalls: { host: string; method: string; path: string }[] = [];
   const fetchFn = (async (input: string | URL | Request, init?: RequestInit) => {
     const request = new Request(input, init);
     const host = new URL(request.url).host;
     if (host === 'wixapis.test') return wix.handle(request);
-    if (host === 'supertext.test') return supertext.handle(request);
+    if (host === 'supertext.test' || host === 'review.test') {
+      supertextCalls.push({ host, method: request.method, path: new URL(request.url).pathname });
+      return supertext.handle(request);
+    }
     throw new Error(`Unexpected request to ${request.url}`);
   }) as typeof fetch;
   const config = loadConfig({
@@ -30,6 +35,8 @@ export function setup(env: Record<string, string> = {}) {
     SUPERTEXT_API_KEY: 'server-key',
     // Never the live Commando Center: reports go to the stand-in (supertext.reports).
     SUPERTEXT_REPORT_URL: 'https://supertext.test/report',
+    // Languages with Translation review go to the review service's stand-in (same handler).
+    SUPERTEXT_REVIEW_URL: 'https://review.test/v1/',
     ...env,
   });
   const jobs: Promise<unknown>[] = [];
@@ -51,5 +58,5 @@ export function setup(env: Record<string, string> = {}) {
     await Promise.all(jobs.splice(0));
     await reporting.settle();
   };
-  return { app, wix, supertext, store, config, reporting, instance, request, page, settle };
+  return { app, wix, supertext, supertextCalls, store, config, reporting, instance, request, page, settle };
 }

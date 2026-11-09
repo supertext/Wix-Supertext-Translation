@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS translation_jobs (
 CREATE INDEX IF NOT EXISTS translation_jobs_instance ON translation_jobs (instance_id, created_at DESC);
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS version_reports BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS reporter_state JSONB;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS review_locales JSONB NOT NULL DEFAULT '[]'::jsonb;
 `;
 
 /** Creates the database named in the URL if it doesn't exist (the shared server has several). */
@@ -62,7 +63,7 @@ export class PostgresStore implements Store {
 
   async getSettings(instanceId: string): Promise<SiteSettings> {
     const { rows } = await this.pool.query(
-      'SELECT api_key, tone, publish, language_codes, version_reports FROM site_settings WHERE instance_id = $1',
+      'SELECT api_key, tone, publish, language_codes, review_locales, version_reports FROM site_settings WHERE instance_id = $1',
       [instanceId],
     );
     if (rows.length === 0) return defaultSettings(instanceId);
@@ -73,15 +74,16 @@ export class PostgresStore implements Store {
       tone: row.tone,
       publish: row.publish,
       languageCodes: row.language_codes ?? {},
+      reviewLocales: Array.isArray(row.review_locales) ? row.review_locales : [],
       versionReports: row.version_reports ?? true,
     };
   }
 
   async saveSettings(settings: SiteSettings): Promise<void> {
     await this.pool.query(
-      `INSERT INTO site_settings (instance_id, api_key, tone, publish, language_codes, version_reports, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, now())
-       ON CONFLICT (instance_id) DO UPDATE SET api_key = $2, tone = $3, publish = $4, language_codes = $5, version_reports = $6, updated_at = now()`,
+      `INSERT INTO site_settings (instance_id, api_key, tone, publish, language_codes, version_reports, review_locales, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+       ON CONFLICT (instance_id) DO UPDATE SET api_key = $2, tone = $3, publish = $4, language_codes = $5, version_reports = $6, review_locales = $7, updated_at = now()`,
       [
         settings.instanceId,
         this.secrets.encrypt(settings.apiKey),
@@ -89,6 +91,7 @@ export class PostgresStore implements Store {
         settings.publish,
         settings.languageCodes,
         settings.versionReports,
+        JSON.stringify(settings.reviewLocales ?? []),
       ],
     );
   }

@@ -125,6 +125,108 @@
   }
   if (panel && panel.getAttribute('data-job')) poll(panel.getAttribute('data-job'));
 
+  // --- Translation files: export for translation, import translation ---------
+  var exportCard = document.getElementById('export-card');
+  if (exportCard && form) {
+    var exportButton = document.getElementById('export-button');
+    var exportMessage = document.getElementById('export-message');
+    exportButton.addEventListener('click', function () {
+      var entityIds = checked('entity');
+      if (entityIds.length !== 1) {
+        exportMessage.textContent = exportCard.getAttribute('data-select-one');
+        return;
+      }
+      var formatInput = exportCard.querySelector('input[name="file-format"]:checked');
+      var locales = Array.prototype.slice
+        .call(exportCard.querySelectorAll('input[name="export-locale"]:checked'))
+        .map(function (input) {
+          return input.value;
+        });
+      exportMessage.textContent = '';
+      exportButton.disabled = true;
+      fetch('/api/files/export?locale=' + encodeURIComponent(locale), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Wix-Instance': instance },
+        body: JSON.stringify({
+          schemaId: exportCard.getAttribute('data-schema'),
+          entityIds: entityIds,
+          locales: locales,
+          format: formatInput ? formatInput.value : 'xliff',
+        }),
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            return response.json().then(function (json) {
+              exportMessage.textContent = json.text || (json.error && json.error.message) || 'Error';
+            });
+          }
+          var disposition = response.headers.get('content-disposition') || '';
+          var match = /filename="([^"]+)"/.exec(disposition);
+          return response.blob().then(function (blob) {
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = match ? match[1] : 'wix-supertext.xlf';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(function () {
+              URL.revokeObjectURL(url);
+            }, 10000);
+          });
+        })
+        .catch(function (error) {
+          exportMessage.textContent = String(error);
+        })
+        .then(function () {
+          exportButton.disabled = false;
+        });
+    });
+  }
+
+  var importForm = document.getElementById('import-form');
+  if (importForm) {
+    var importButton = document.getElementById('import-button');
+    var importMessage = document.getElementById('import-message');
+    var importResult = document.getElementById('import-result');
+    importForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      importResult.innerHTML = '';
+      var data = new FormData(importForm);
+      var file = data.get('file');
+      if (file && file.size > 10 * 1024 * 1024) {
+        importMessage.textContent = importForm.getAttribute('data-too-large');
+        return;
+      }
+      var label = importButton.textContent;
+      importButton.disabled = true;
+      importButton.textContent = importForm.getAttribute('data-importing');
+      importMessage.textContent = '';
+      fetch('/api/files/import?locale=' + encodeURIComponent(locale), {
+        method: 'POST',
+        headers: { 'X-Wix-Instance': instance },
+        body: data,
+      })
+        .then(function (response) {
+          return response.json().then(function (json) {
+            if (!response.ok) {
+              importMessage.textContent = json.text || (json.error && json.error.message) || 'Error';
+              return;
+            }
+            // Server-rendered (escaped) summary.
+            importResult.innerHTML = json.html || '';
+          });
+        })
+        .catch(function (error) {
+          importMessage.textContent = String(error);
+        })
+        .then(function () {
+          importButton.disabled = false;
+          importButton.textContent = label;
+        });
+    });
+  }
+
   // --- Settings page --------------------------------------------------------
   var test = document.getElementById('test-button');
   if (test) {

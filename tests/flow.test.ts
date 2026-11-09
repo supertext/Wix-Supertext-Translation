@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { signInstance } from '../src/auth/instance.js';
 import type { Job } from '../src/store/store.js';
+import { loadConfig } from '../src/config.js';
+import { effectiveReviewUrl, REVIEW_URL } from '../src/supertext/index.js';
 import { APP_SECRET, INSTANCE_ID, setup } from './helpers.js';
 import { CATEGORIES, PRODUCTS } from './standin/seed.js';
 
@@ -154,29 +156,40 @@ describe('translation job', () => {
 
   it('sends nothing for a site language without a Supertext language and says where to map it', async () => {
     const env = setup();
-    env.wix.locales.push({ id: 'de', languageCode: 'de', displayName: 'German' });
-    await startJob(env, { schemaId: PRODUCTS, entityIds: ['prod-hazelnut-bar'], locales: ['de', 'fr-CH'] });
+    env.wix.locales.push({ id: 'gsw', languageCode: 'gsw', displayName: 'Swiss German' });
+    await startJob(env, { schemaId: PRODUCTS, entityIds: ['prod-hazelnut-bar'], locales: ['gsw', 'fr-CH'] });
     await env.settle();
     const job = (await env.store.latestJob(INSTANCE_ID))!;
     expect(job.status).toBe('done');
     expect(job.items.map((item) => [item.locale, item.state, item.error?.code])).toEqual([
       ['fr-CH', 'translated', undefined],
-      ['de', 'failed', 'unsupported_language'],
+      ['gsw', 'failed', 'unsupported_language'],
     ]);
     expect(env.supertext.documents.map((document) => document.target)).toEqual(['fr-CH']);
     for (const locale of ['en', 'de', 'fr', 'it']) {
       const panel = (await (await env.request(`/api/jobs/${job.id}?locale=${locale}`)).json()) as { html: string };
-      expect(panel.html).toContain('German');
+      expect(panel.html).toContain('Swiss German');
     }
     const panel = (await (await env.request(`/api/jobs/${job.id}?locale=en`)).json()) as { html: string };
-    expect(panel.html).toContain('&quot;German&quot; has no Supertext language yet, so nothing was sent. Choose its Supertext language under Settings → Languages.');
+    expect(panel.html).toContain('&quot;Swiss German&quot; has no Supertext language yet, so nothing was sent. Choose its Supertext language under Settings → Languages.');
 
     // Mapped, it is translated.
     const settings = await env.store.getSettings(INSTANCE_ID);
-    await env.store.saveSettings({ ...settings, languageCodes: { de: 'de-AT' } });
+    await env.store.saveSettings({ ...settings, languageCodes: { gsw: 'gsw-u-sd-chbe' } });
+    await startJob(env, { schemaId: PRODUCTS, entityIds: ['prod-hazelnut-bar'], locales: ['gsw'] });
+    await env.settle();
+    expect(env.supertext.documents.at(-1)?.target).toBe('gsw-u-sd-chbe');
+  });
+
+  it('translates an unmapped language with an obvious default (de → de-DE)', async () => {
+    const env = setup();
+    env.wix.locales.push({ id: 'de', languageCode: 'de', displayName: 'German' });
+    const translate = await (await env.page('/')).text();
+    expect(translate).toMatch(/<input type="checkbox" name="locale" value="de" checked=""\/>/);
     await startJob(env, { schemaId: PRODUCTS, entityIds: ['prod-hazelnut-bar'], locales: ['de'] });
     await env.settle();
-    expect(env.supertext.documents.at(-1)?.target).toBe('de-AT');
+    expect(env.supertext.documents.at(-1)?.target).toBe('de-DE');
+    expect((await env.store.latestJob(INSTANCE_ID))!.items.every((item) => item.state === 'translated')).toBe(true);
   });
 
   it('sends politeness only to targets that offer it', async () => {
@@ -216,6 +229,73 @@ describe('translation job', () => {
   });
 });
 
+describe('translation review', () => {
+  const byHost = (env: ReturnType<typeof setup>, host: string) =>
+    env.supertextCalls.filter((call) => call.host === host && call.path.startsWith('/v1/translate/')).map((call) => call.method);
+
+  it('sends a language with Translation review through the review service, the others directly', async () => {
+    const env = setup();
+    const settings = await env.store.getSettings(INSTANCE_ID);
+    await env.store.saveSettings({ ...settings, reviewLocales: ['de-CH'] });
+    await startJob(env, { schemaId: PRODUCTS, entityIds: ['prod-hazelnut-bar'], locales: ['de-CH', 'fr-CH'] });
+    await env.settle();
+    const job = (await env.store.latestJob(INSTANCE_ID))!;
+    expect(job.items.map((item) => [item.locale, item.state])).toEqual([
+      ['de-CH', 'translated'],
+      ['fr-CH', 'translated'],
+    ]);
+    // German: upload, status, download and delete through the review service; French directly.
+    expect(byHost(env, 'review.test')).toEqual(['POST', 'GET', 'GET', 'DELETE']);
+    expect(byHost(env, 'supertext.test')).toEqual(['POST', 'GET', 'GET', 'DELETE']);
+    expect(content(env, 'prod-hazelnut-bar', 'de-CH')!.fields.name.textValue).toBe('Milchschokoladentafel mit Haselnüssen');
+  });
+
+  it("is off everywhere with an empty SUPERTEXT_REVIEW_URL, and Supertext's review service by default", async () => {
+    const env = setup({ SUPERTEXT_REVIEW_URL: '' });
+    const settings = await env.store.getSettings(INSTANCE_ID);
+    await env.store.saveSettings({ ...settings, reviewLocales: ['de-CH'] });
+    await startJob(env, { schemaId: PRODUCTS, entityIds: ['prod-hazelnut-bar'], locales: ['de-CH'] });
+    await env.settle();
+    expect(byHost(env, 'review.test')).toEqual([]);
+    expect(byHost(env, 'supertext.test')).toEqual(['POST', 'GET', 'GET', 'DELETE']);
+    const html = await (await env.page('/settings')).text();
+    expect(html).toMatch(/<input type="checkbox" name="review:de-CH" value="1" checked="" disabled=""/);
+    expect(html).toContain('Translation review is turned off on this server');
+
+    expect(loadConfig({}).reviewUrl).toBe(REVIEW_URL);
+    expect(REVIEW_URL).toBe('https://localizationreview-production.up.railway.app/v1/');
+    expect(effectiveReviewUrl(REVIEW_URL, '')).toBe(REVIEW_URL);
+    expect(effectiveReviewUrl('', '')).toBe('');
+    expect(effectiveReviewUrl('https://api.supertext.com/v1', '')).toBe('');
+    expect(effectiveReviewUrl('https://supertext.test/v1/', 'https://supertext.test/v1')).toBe('');
+  });
+
+  it('never uses the review service for the API key check', async () => {
+    const env = setup();
+    const settings = await env.store.getSettings(INSTANCE_ID);
+    await env.store.saveSettings({ ...settings, reviewLocales: ['de-CH', 'fr-CH'] });
+    await env.request('/api/test', { method: 'POST', body: JSON.stringify({ apiKey: 'some-key' }) });
+    await env.settle();
+    expect(env.supertextCalls.filter((call) => call.host === 'review.test')).toEqual([]);
+  });
+
+  it('saves the checkbox per target language on Settings → Languages', async () => {
+    const env = setup();
+    const response = await env.app.request('/settings', {
+      method: 'POST',
+      body: new URLSearchParams({ instance: env.instance, locale: 'de', tone: 'default', 'review:fr-CH': '1', 'target:fr-CH': 'fr-CH' }),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+    expect((await env.store.getSettings(INSTANCE_ID)).reviewLocales).toEqual(['fr-CH']);
+    const html = await (await env.app.request(response.headers.get('location')!)).text();
+    expect(html).toContain('<th>Übersetzungsprüfung</th>');
+    expect(html).toMatch(/<input type="checkbox" name="review:fr-CH" value="1" checked=""/);
+    expect(html).toMatch(/<input type="checkbox" name="review:de-CH" value="1"(?! checked)/);
+    expect(html).not.toContain('name="review:en-US"');
+    await env.settle();
+  });
+});
+
 describe('settings', () => {
   it('saves the key, tone, publishing and language mapping, and reports codes Supertext does not offer', async () => {
     const env = setup();
@@ -247,9 +327,10 @@ describe('settings', () => {
     expect(html).toContain('french');
     expect(html).toContain('Une clé est enregistrée');
     expect(html).toMatch(/version <a href="https:\/\/github.com\/Supertext\/Wix-Supertext-Translation\/releases\/tag\/v\d+\.\d+\.\d+"/);
-    // The mapping: a select per language, the exact code as default.
+    // The mapping: a combo box per language, the saved code, else the suggestion preselected.
     expect(html).toMatch(/<select id="target-de-CH" name="target:de-CH">.*<option value="de-DE" selected="">/s);
-    expect(html).toContain('Même code : fr-CH');
+    expect(html).toMatch(/<select id="target-fr-CH" name="target:fr-CH">.*<option value="fr-CH" selected="">/s);
+    expect(html).toMatch(/<select id="source-en-US" name="source:en-US">.*<option value="en" selected="">/s);
     expect(html).toContain('Envoyer les informations de version à Supertext');
     await env.settle();
   });
@@ -258,16 +339,20 @@ describe('settings', () => {
     const env = setup();
     env.wix.locales.push(
       { id: 'de', languageCode: 'de', displayName: 'German' },
+      { id: 'en-IE', languageCode: 'en', regionCode: 'IE', displayName: 'English (Ireland)' },
       { id: 'en-GB', languageCode: 'en', regionCode: 'GB', displayName: 'English (UK)' },
     );
     const settings = await env.store.getSettings(INSTANCE_ID);
     await env.store.saveSettings({ ...settings, tone: 'more' });
     const html = await (await env.page('/settings')).text();
-    expect(html).toContain('These languages have no Supertext language yet and aren&#39;t translated until you choose one: German.');
+    expect(html).toContain('These languages have no Supertext language yet and aren&#39;t translated until you choose one: English (Ireland).');
+    // German has a default: preselected, not flagged.
+    expect(html).toMatch(/<select id="target-de" name="target:de">.*<option value="de-DE" selected="">/s);
     expect(html).toContain('— Not translated: choose a Supertext language —');
     expect(html).toContain('Formal or informal address isn&#39;t available for English (UK); Supertext decides there.');
     const translate = await (await env.page('/')).text();
-    expect(translate).toMatch(/<input type="checkbox" name="locale" value="de"\/>/);
+    expect(translate).toMatch(/<input type="checkbox" name="locale" value="en-IE"\/>/);
+    expect(translate).toMatch(/<input type="checkbox" name="locale" value="de" checked=""\/>/);
     expect(translate).toContain('no Supertext language yet');
     await env.settle();
   });

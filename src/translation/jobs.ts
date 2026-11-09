@@ -16,7 +16,11 @@ import { translateEntity } from './translate.js';
 export interface JobDeps {
   store: Store;
   wix: Pick<WixClient, 'locales' | 'schemas' | 'allContents' | 'saveContent'>;
-  supertext: (settings: SiteSettings) => Pick<SupertextClient, 'translateTexts'>;
+  /**
+   * The Supertext client for a site: `review` true for a target language with *Translation review*
+   * on (Supertext's review service, same key and protocol), else the direct one.
+   */
+  supertext: (settings: SiteSettings, review: boolean) => Pick<SupertextClient, 'translateTexts'>;
   /** Supertext rejected the API key (HTTP 401/403): the Commando Center's key check is told. */
   onAuthenticationFailure?: (httpStatus: number) => void;
 }
@@ -81,7 +85,17 @@ export async function startJob(deps: JobDeps, request: JobRequest): Promise<{ jo
 export async function runJob(deps: JobDeps, job: Job): Promise<Job> {
   const { store, wix } = deps;
   const settings = await store.getSettings(job.instanceId);
-  const supertext = deps.supertext(settings);
+  // Two clients at most: directly to Supertext, and (only if a language needs it) the review service.
+  // translateTexts submits, polls, downloads and deletes with the same client, so a job is always
+  // collected where it was submitted.
+  const clients = new Map<boolean, Pick<SupertextClient, 'translateTexts'>>();
+  const reviewLocales = new Set(settings.reviewLocales ?? []);
+  const supertextFor = (locale: string) => {
+    const review = reviewLocales.has(locale);
+    let client = clients.get(review);
+    if (!client) clients.set(review, (client = deps.supertext(settings, review)));
+    return client;
+  };
   const languages = await siteLanguages(wix);
   const schema = (await wix.schemas()).find((candidate) => candidate.id === job.schemaId);
   if (!schema) {
@@ -145,7 +159,7 @@ export async function runJob(deps: JobDeps, job: Job): Promise<Job> {
           const supertextTarget = targetCodes.get(locale.id)!;
           const result = await translateEntity({
             wix,
-            supertext,
+            supertext: supertextFor(locale.id),
             schema,
             source,
             target: existing.get(`${entityId}|${locale.id}`),

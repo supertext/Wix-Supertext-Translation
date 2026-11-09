@@ -1,3 +1,5 @@
+import { REVIEW_URL } from './supertext/index.js';
+
 /** Settings from environment variables (Railway variables in production). */
 export interface Config {
   port: number;
@@ -12,6 +14,11 @@ export interface Config {
   /** Default Supertext API key for sites that haven't entered their own (the demo site). */
   supertextApiKey: string;
   supertextEndpoint: string;
+  /**
+   * SUPERTEXT_REVIEW_URL: the review service for languages with *Translation review* on.
+   * Unset: Supertext's review service (REVIEW_URL); '' turns review off for every site and language.
+   */
+  reviewUrl: string;
   databaseUrl: string;
   /** Key for encrypting stored API keys; falls back to a key derived from the app secret. */
   encryptionKey: string;
@@ -31,6 +38,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     wixApiBase: (env.WIX_API_BASE || 'https://www.wixapis.com').replace(/\/+$/, ''),
     supertextApiKey: env.SUPERTEXT_API_KEY ?? '',
     supertextEndpoint: env.SUPERTEXT_API_ENDPOINT ?? '',
+    reviewUrl: (env.SUPERTEXT_REVIEW_URL ?? REVIEW_URL).trim(),
     databaseUrl: env.DATABASE_URL ?? '',
     encryptionKey: env.APP_ENCRYPTION_KEY ?? '',
     versionReports: env.SUPERTEXT_VERSION_REPORTS ?? '',

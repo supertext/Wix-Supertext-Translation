@@ -1,67 +1,71 @@
-/* Supertext Translation for Wix: close to the Wix dashboard's look (Wix Design System colours). */
+/* Supertext Translation for Wix, in Supertext's look (supertext.com): deep green, mint, warm off-white, Inter. */
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("/static/fonts/inter-latin-wght-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("/static/fonts/inter-latin-ext-wght-normal.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 :root {
-  --bg: #f0f4f7;
+  --bg: #f7f5f3;          /* Supertext's warm off-white */
   --card: #ffffff;
-  --text: #162d3d;
-  --muted: #577083;
-  --line: #dfe5eb;
-  --blue: #116dff;
-  --blue-dark: #0f62e6;
-  --blue-light: #e7f0ff;
-  --green: #25a55a;
-  --green-light: #e5f6ec;
-  --orange: #fe620f;
-  --orange-light: #fff1e6;
-  --red: #df3131;
-  --red-light: #fdeaea;
-  --st: #ff6e40;
+  --text: #003230;        /* deep green: header, text, headings, outlines */
+  --muted: #505252;
+  --line: #dfe1df;        /* light grey lines */
+  --input-line: #c8cbc8;
+  --teal-light: #eef1ef;  /* hover, info notices */
+  --mint: #78ffaf;        /* main action, active tab, selection, finished */
+  --mint-hover: #86ffb7;
+  --mint-light: #e4fff0;
+  --green: #2bb673;
+  --orange: #a35a00;
+  --orange-light: #fff6e8;
+  --red: #c4314b;
+  --red-light: #fdebee;
 }
 * { box-sizing: border-box; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 14px/1.5 "Madefor Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-}
-a { color: var(--blue); text-decoration: none; }
-a:hover { text-decoration: underline; }
-h1 { font-size: 24px; font-weight: 700; margin: 0 0 6px; }
-h2 { font-size: 16px; font-weight: 700; margin: 0 0 12px; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; font-feature-settings: "cv11"; overflow-x: hidden; }
+a { color: var(--text); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, button:focus-visible, input[type=checkbox]:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.topbar a:focus-visible { outline-color: var(--mint); }
+h1, h2 { color: var(--text); }
+h1 { font-size: 26px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.02em; }
+h2 { font-size: 17px; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.01em; }
 h2:not(:first-child) { margin-top: 24px; }
-code { font: 12px/1 ui-monospace, Menlo, monospace; background: var(--bg); padding: 3px 6px; border-radius: 4px; color: var(--muted); }
+code { font: 12px/1 ui-monospace, Menlo, monospace; background: var(--bg); padding: 3px 6px; border-radius: 6px; color: var(--muted); }
 
-.topbar { display: flex; align-items: center; gap: 24px; background: var(--card); border-bottom: 1px solid var(--line); padding: 0 32px; height: 54px; }
-.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
-.brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--st); }
-.tabs { display: flex; gap: 4px; height: 100%; }
-.tab { display: flex; align-items: center; padding: 0 14px; color: var(--muted); border-bottom: 3px solid transparent; }
-.tab:hover { text-decoration: none; color: var(--text); }
-.tab.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
+/* The header: Supertext's deep-green bar with rounded bottom corners and the mint logo.
+   Compact, because it sits right below Wix's own dashboard bar. */
+.topbar { display: flex; align-items: center; gap: 24px; background: var(--text); color: #fff; padding: 0 24px; height: 50px; max-width: 1104px; margin: 0 auto; border-radius: 0 0 15px 15px; }
+.brand { display: flex; align-items: center; }
+.brand img { height: 18px; width: auto; display: block; }
+.tabs { display: flex; gap: 4px; }
+.tab { display: flex; align-items: center; padding: 5px 14px; color: rgba(255, 255, 255, .82); border-radius: 999px; text-decoration: none; }
+.tab:hover { color: #fff; background: rgba(255, 255, 255, .1); }
+.tab.active { color: var(--text); background: var(--mint); font-weight: 600; }
 
-.page { max-width: 1040px; margin: 0 auto; padding: 28px 32px 48px; }
+.page { max-width: 1040px; margin: 0 auto; padding: 24px 32px 48px; }
 .intro { color: var(--muted); margin: 0 0 20px; max-width: 760px; }
-.card { background: var(--card); border-radius: 8px; padding: 24px; margin: 0 0 20px; box-shadow: 0 1px 3px rgba(22, 45, 61, .08); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 15px; padding: 24px 26px; margin: 0 0 20px; }
 .muted { color: var(--muted); }
 .help { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
 
 .field { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; max-width: 460px; }
 .field > span { font-weight: 600; font-size: 13px; }
 input[type=text], input[type=password], input:not([type]), select {
-  font: inherit; color: var(--text); border: 1px solid #c1e4fe; border-radius: 6px; padding: 7px 10px; background: #fff; min-height: 36px;
+  font: inherit; color: var(--text); border: 1px solid var(--input-line); border-radius: 10px; padding: 7px 12px; background: #fff; min-height: 40px;
 }
-input:focus, select:focus { outline: 2px solid var(--blue-light); border-color: var(--blue); }
+input:focus, select:focus { outline: 3px solid var(--mint); outline-offset: 0; border-color: var(--text); }
 .inline { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; cursor: pointer; }
-input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--blue); margin: 0; }
+input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--text); margin: 0; }
 
-button { font: inherit; font-weight: 600; border-radius: 18px; padding: 7px 20px; border: 1px solid var(--blue); background: #fff; color: var(--blue); cursor: pointer; min-height: 36px; }
-button:hover { background: var(--blue-light); }
-button.primary { background: var(--blue); color: #fff; }
-button.primary:hover { background: var(--blue-dark); }
+/* Pill buttons as on supertext.com: mint for the main action, a deep-green outline for the others. */
+button { display: inline-flex; align-items: center; justify-content: center; font: inherit; font-weight: 500; border-radius: 999px; padding: 8px 22px; border: 1px solid var(--text); background: transparent; color: var(--text); cursor: pointer; min-height: 40px; transition: background-color .15s, border-color .15s; }
+button:hover { background: var(--line); border-color: transparent; }
+button.primary { background: var(--mint); border-color: var(--mint); color: var(--text); font-weight: 600; }
+button.primary:hover { background: var(--mint-hover); border-color: var(--mint-hover); }
 button:disabled { opacity: .45; cursor: default; }
 .actions { display: flex; align-items: center; gap: 14px; margin-top: 20px; }
 
 table { width: 100%; border-collapse: collapse; }
-th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: none; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 tr:last-child td { border-bottom: 0; }
 td.title { font-weight: 600; }
@@ -71,38 +75,65 @@ th.check, td.check { width: 36px; }
 .pager .inline { margin: 0; }
 .spacer { flex: 1; }
 
-.badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 12px; white-space: nowrap; }
+.badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
 .badge.none { background: var(--bg); color: var(--muted); }
-.badge.partial { background: var(--orange-light); color: #b04500; }
-.badge.done { background: var(--green-light); color: #136b38; }
+.badge.partial { background: var(--orange-light); color: var(--orange); }
+.badge.done { background: var(--mint); color: var(--text); }
 
 .languages { display: flex; flex-wrap: wrap; gap: 10px; }
-.language { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; cursor: pointer; }
+.language { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; cursor: pointer; background: #fff; }
+.language:has(input:checked) { border-color: var(--text); background: var(--mint-light); }
 .overwrite { margin-top: 20px; font-weight: 600; }
 
-.notice { border-radius: 8px; padding: 12px 16px; margin: 0 0 20px; border-left: 4px solid var(--blue); background: var(--blue-light); }
+.notice { border-radius: 12px; padding: 12px 18px; margin: 0 0 20px; border-left: 4px solid var(--text); background: var(--teal-light); }
 .notice p { margin: 6px 0 0; }
-.notice.success { border-color: var(--green); background: var(--green-light); }
+.notice.success { border-color: var(--green); background: var(--mint-light); }
 .notice.warning { border-color: var(--orange); background: var(--orange-light); }
 .notice.error { border-color: var(--red); background: var(--red-light); }
 .card .notice { margin: 12px 0 0; }
 
 .job .results { margin-top: 14px; }
 .progress { display: flex; align-items: center; gap: 10px; margin: 0; font-weight: 600; }
-.spinner { width: 16px; height: 16px; border: 2px solid var(--blue-light); border-top-color: var(--blue); border-radius: 50%; animation: spin .8s linear infinite; }
+.spinner { width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--text); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.result.translated { color: #136b38; font-weight: 600; }
+.result.translated { color: var(--text); font-weight: 600; }
+.result.translated::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 8px; vertical-align: 1px; }
 .result.unchanged { color: var(--muted); }
 .result.failed { color: var(--red); }
 
 .codes td { padding: 8px 10px; }
-.codes td:first-child { width: 50%; }
-#test-result.ok { color: #136b38; font-weight: 600; }
+.codes td:first-child { width: 40%; }
+.codes td.review, .codes th:last-child { text-align: center; width: 9em; }
+.codes th { text-align: left; font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.codes select { max-width: 100%; }
+#test-result.ok { color: var(--text); font-weight: 600; }
 #test-result.failed { color: var(--red); }
 .about { margin-top: 20px; }
 .about p { margin: 0; }
-.codes th { text-align: left; font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); }
-.codes select { max-width: 100%; }
-.warning-text { color: #b84400; }
+.warning-text { color: var(--orange); }
 .key-check p:first-child { margin-top: 0; }
 #test-result .notice { margin: 12px 0 0; }
+
+/* Phones (the Wix app on a phone, or a narrow dashboard). */
+@media (max-width: 640px) {
+  body { font-size: 15px; }
+  .topbar { gap: 12px; padding: 0 14px; height: 46px; }
+  .brand img { height: 15px; }
+  .tab { padding: 4px 12px; }
+  .page { padding: 18px 16px 40px; }
+  h1 { font-size: 22px; }
+  .card { padding: 18px 16px; border-radius: 12px; }
+  .field { max-width: none; }
+  input[type=text], input[type=password], input:not([type]), select { font-size: 16px; width: 100%; }
+  .actions, .pager { flex-wrap: wrap; }
+  .actions button { flex: 1 1 auto; }
+  .languages { flex-direction: column; gap: 8px; }
+  .language { width: 100%; }
+  .card:has(table.items) { overflow-x: auto; }
+  table.items td.title { min-width: 150px; }
+  .codes td:first-child { width: auto; }
+}
+fieldset.plain { border: 0; padding: 0; margin: 0 0 14px; }
+fieldset.plain legend { font-weight: 600; font-size: 13px; padding: 0; margin: 0 0 4px; }
+.import-summary { margin-top: 16px; }
+.import-summary ul { margin: 6px 0 0; padding-left: 20px; }

@@ -39,6 +39,8 @@ async function main() {
   const supertext = createSupertextStandin();
   const wixUrl = await listen((request) => wix.handle(request));
   const supertextUrl = await listen((request) => supertext.handle(request));
+  // Translation review: a second stand-in address, never Supertext's real review service.
+  const reviewUrl = await listen((request) => supertext.handle(request));
   const store = new MemoryStore();
   const app = createApp({
     config: loadConfig({
@@ -46,6 +48,7 @@ async function main() {
       WIX_APP_SECRET: SECRET,
       WIX_API_BASE: wixUrl,
       SUPERTEXT_API_ENDPOINT: `${supertextUrl}/v1/`,
+      SUPERTEXT_REVIEW_URL: `${reviewUrl}/v1/`,
       // Version reports go to the stand-in, never to the live Commando Center.
       SUPERTEXT_REPORT_URL: `${supertextUrl}/report`,
     }),
@@ -68,11 +71,16 @@ async function main() {
   await page.goto(url('/'));
   await shot('no-api-key', page.locator('.notice.warning').first());
 
-  // Language mapping: a site language Supertext has no exact code for ("Portuguese").
-  wix.locales.push({ id: 'pt', languageCode: 'pt', visibility: 'VISIBLE', displayName: 'Portuguese' });
+  // Language mapping: a language with a default ("Portuguese" → pt-PT) and one without ("Swiss German").
+  wix.locales.push(
+    { id: 'pt', languageCode: 'pt', visibility: 'VISIBLE', displayName: 'Portuguese' },
+    { id: 'gsw', languageCode: 'gsw', visibility: 'VISIBLE', displayName: 'Swiss German' },
+  );
+  // Translation review ticked for German (Switzerland).
+  await store.saveSettings({ ...(await store.getSettings(INSTANCE)), reviewLocales: ['de-CH'] });
   await page.goto(url('/settings'));
   await shot('settings-languages', page.locator('section.card', { has: page.locator('table.codes') }));
-  wix.locales.pop();
+  wix.locales.splice(-2);
 
   await page.goto(url('/settings'));
   await page.fill('input[name="apiKey"]', 'Supertext-Auth-Key 0123456789abcdef');
@@ -106,6 +114,23 @@ async function main() {
   await page.check('input[name="entity"]');
   await page.check('#overwrite');
   await shot('overwrite-warning', page.locator('#translate-form'));
+
+  // Translation files: export the category as XLIFF, translate the file, import it.
+  await page.goto(url('/', { type: '6a1f2c3d-0002-4000-8000-000000000002' }));
+  await page.check('input[name="entity"]');
+  await page.uncheck('input[name="export-locale"][value="it-CH"]');
+  await shot('export-for-translation', page.locator('#export-card'));
+  const [download] = await Promise.all([page.waitForEvent('download'), page.click('#export-button')]);
+  const xliff = await (await download.createReadStream()).toArray().then((chunks) => Buffer.concat(chunks).toString('utf8'));
+  // A translator's work: the stand-in's translations of the sample texts.
+  const translated = xliff
+    .replace(/(target-language="fr-CH"[\s\S]*?<source>Swiss chocolate<\/source>)/, '$1<target>Chocolat suisse</target>')
+    .replace(/(target-language="fr-CH"[\s\S]*?<trans-unit id="description"[^>]*>\s*<source>([\s\S]*?)<\/source>)/, (_m, head: string, source: string) =>
+      `${head}<target>${source.replace('Handmade pralines, bars and truffles from our workshop in ', 'Pralinés, tablettes et truffes faits main dans notre atelier à ').replace('>Bern<', '>Berne<')}</target>`);
+  await page.setInputFiles('#import-form input[name="file"]', { name: 'wix-cat-swiss-chocolate.xlf', mimeType: 'application/x-xliff+xml', buffer: Buffer.from(translated) });
+  await page.click('#import-button');
+  await page.waitForSelector('#import-result .notice');
+  await shot('import-summary', page.locator('#import-form'));
 
   // The page in German (follows the dashboard language).
   await page.goto(url('/', { locale: 'de', type: '6a1f2c3d-0003-4000-8000-000000000003' }));

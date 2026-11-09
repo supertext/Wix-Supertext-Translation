@@ -6,29 +6,39 @@ import {
   languageName,
   resolveSource,
   resolveTarget,
+  suggestSource,
+  suggestTarget,
   supportedSource,
   supportedTarget,
   supportsPoliteness,
   targetCodeOf,
+  targetOptions,
 } from '../src/translation/language-codes.js';
 
-describe('language codes (no guessing)', () => {
-  it('uses the mapping, else an exact Supertext code, else nothing', () => {
+describe('language codes (no guessing beyond the defaults)', () => {
+  it('uses the mapping, else an exact Supertext code, else the default, else nothing', () => {
     expect(resolveTarget('de', { de: 'de-CH' })).toBe('de-CH');
     expect(resolveTarget('de_ch', {})).toBe('de-CH');
     expect(resolveTarget('es', {})).toBe('es');
-    expect(targetCodeOf('de', {})).toBeNull(); // no default region
-    expect(targetCodeOf('zh-CN', {})).toBeNull();
+    expect(targetCodeOf('de', {})).toBe('de-DE'); // the SDK default
+    expect(targetCodeOf('zh-CN', {})).toBe('zh-Hans');
+    expect(targetCodeOf('es-ES', {})).toBe('es');
+    expect(targetCodeOf('en-IE', {})).toBeNull(); // no default: needs a mapping
+    expect(suggestTarget('de')).toBe('de-DE');
+    expect(suggestTarget('fr-CH')).toBe('fr-CH');
+    expect(suggestTarget('gsw')).toBeNull();
+    expect(suggestSource('en-US')).toBe('en');
+    expect(targetOptions()).toContain('gsw-u-sd-chzh');
     expect(exactTarget('fr-ch')).toBe('fr-CH');
     let error: unknown;
     try {
-      resolveTarget('pt', {});
+      resolveTarget('en-IE', {});
     } catch (caught) {
       error = caught;
     }
     const info = errorInfo(error);
-    expect(info).toMatchObject({ code: 'unsupported_language', params: { language: 'pt' } });
-    expect(translator('de').error(info)).toContain('„pt“ hat noch keine Supertext-Sprache');
+    expect(info).toMatchObject({ code: 'unsupported_language', params: { language: 'en-IE' } });
+    expect(translator('de').error(info)).toContain('„en-IE“ hat noch keine Supertext-Sprache');
   });
 
   it('sends the source bare; one mapping serves both directions', () => {

@@ -1,10 +1,12 @@
 // Wix locale IDs → Supertext language codes, with the Supertext SDK's `Languages`.
 //
-// No guessing: a Wix locale is sent as the Supertext code the site chose for it
-// under Settings → Languages (one mapping for both directions), else as the
-// supported Supertext code it equals (case and _/- ignored: "de-CH", "es"),
-// else it has no Supertext language and nothing is sent (`unsupported_language`).
-// There are no default regions: a bare "de" has to be mapped (de-CH, de-DE, de-AT).
+// No guessing beyond the obvious: a Wix locale is sent as the Supertext code the site
+// chose for it in its combo box under Settings → Languages (one mapping for both
+// directions), else as the supported Supertext code it equals (case and _/- ignored:
+// "de-CH", "es"), else as the SDK's default (de → de-DE, en → en-US, fr → fr-FR,
+// it → it-IT, pt → pt-PT, zh → zh-Hans, sr → sr-Latn, zh-TW → zh-Hant, es-ES → es, …),
+// else it has no Supertext language and nothing is sent (`unsupported_language`:
+// en-IE, de-LI, gsw, sr-RS, … have to be mapped).
 //
 // Pure functions without the SDK client, so the views can use them too.
 
@@ -20,7 +22,7 @@ export const resolveTarget = (wixLocale: string, mapping: Mapping): string => La
 /** The source code to send for the site's main locale ("en-US" → "en"). Throws `unsupported_language`. */
 export const resolveSource = (wixLocale: string, mapping: Mapping): string => Languages.source(wixLocale, mapping);
 
-/** The target code for a Wix locale, or null if it has none (unmapped and no exact match). */
+/** The target code for a Wix locale, or null if it has none (unmapped, no exact match, no default). */
 export function targetCodeOf(wixLocale: string, mapping: Mapping): string | null {
   try {
     return resolveTarget(wixLocale, mapping);
@@ -40,6 +42,15 @@ export function sourceCodeOf(wixLocale: string, mapping: Mapping): string | null
 
 /** The supported target a Wix locale equals without a mapping ("de-ch" → "de-CH", "de" → null). */
 export const exactTarget = (wixLocale: string): string | null => Languages.matchTarget(wixLocale);
+
+/** What the combo box preselects for an unmapped locale: the exact match, else the default, else null. */
+export const suggestTarget = (wixLocale: string): string | null => Languages.suggestTarget(wixLocale);
+
+/** What the main language's combo box preselects: the source code it equals ("en-US" → "en"), else null. */
+export const suggestSource = (wixLocale: string): string | null => sourceCodeOf(wixLocale, {});
+
+/** Supertext's target codes for the combo box (the SDK's `targetOptions()`). */
+export const targetOptions = (): string[] => Languages.targetOptions().map((language) => language.code);
 
 /** A value from the settings form as a supported target code, or null. */
 export const supportedTarget = (code: string): string | null => Languages.matchTarget(code);

@@ -12,6 +12,8 @@ export interface SiteSettings {
   publish: boolean;
   /** Wix locale ID → Supertext code (Settings → Languages); one mapping for both directions. */
   languageCodes: Record<string, string>;
+  /** Wix locale IDs with *Translation review* on (Settings → Languages): translated through Supertext's review service. */
+  reviewLocales: string[];
   /** "Send version information to Supertext" (on by default; SUPERTEXT_VERSION_REPORTS=0 turns it off for all sites). */
   versionReports: boolean;
 }
@@ -22,6 +24,7 @@ export const defaultSettings = (instanceId: string): SiteSettings => ({
   tone: 'default',
   publish: true,
   languageCodes: {},
+  reviewLocales: [],
   versionReports: true,
 });
 

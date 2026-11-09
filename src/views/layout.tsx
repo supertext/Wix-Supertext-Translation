@@ -29,12 +29,15 @@ export function Layout(props: { ctx: PageContext; title: string; children: Child
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{props.title}</title>
+        <link rel="preload" href="/static/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin="" />
         <link rel="stylesheet" href="/static/app.css" />
+        <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+        <meta name="theme-color" content="#003230" />
       </head>
       <body data-instance={ctx.instance} data-locale={t.locale}>
         <header class="topbar">
           <div class="brand">
-            <span class="dot" aria-hidden="true"></span>Supertext
+            <img src="/static/supertext-logo.svg" alt="Supertext" width="100" height="18" />
           </div>
           <nav class="tabs">
             <a href={appUrl(ctx, '/')} class={ctx.page === 'translate' ? 'tab active' : 'tab'}>
