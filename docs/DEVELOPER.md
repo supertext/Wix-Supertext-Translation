@@ -100,7 +100,7 @@ All of this is done by the **Supertext SDK** (next section): header `Authorizati
 
 ### Supertext SDK
 
-The app uses the TypeScript SDK from [Supertext-API-SDK-and-Guide](https://github.com/Supertext/Supertext-API-SDK-and-Guide) (`sdk/typescript`, 0.5.0), the shared client of all Supertext plugins. It provides the API client and the API key check (`checkApiKey()`, `apiKeyFingerprint()`, `SDK_VERSION`); version reports come from Supertext Plugin Health (next section). It isn't on npm yet, so it is **vendored** in `src/vendor/supertext-sdk/` (its source tree as it is: the version-neutral `index.ts` and `version.ts`, the API in `v1/`; with `LICENSE`, `COMMIT` = the SDK commit, `VERSION` and a `README.md`). Don't edit those files: fix the SDK upstream, then
+The app uses the TypeScript SDK from [Supertext-API-SDK-Guide](https://github.com/Supertext/Supertext-API-SDK-Guide) (`sdk/typescript`, 0.5.0), the shared client of all Supertext plugins. It provides the API client and the API key check (`checkApiKey()`, `apiKeyFingerprint()`, `SDK_VERSION`); version reports come from Supertext Plugin Health (next section). It isn't on npm yet, so it is **vendored** in `src/vendor/supertext-sdk/` (its source tree as it is: the version-neutral `index.ts` and `version.ts`, the API in `v1/`; with `LICENSE`, `COMMIT` = the SDK commit, `VERSION` and a `README.md`). Don't edit those files: fix the SDK upstream, then
 
 ```bash
 scripts/vendor-sdk.sh [commit-or-branch]   # default: main; SDK_DIR=/path/to/clone uses a local clone as it is

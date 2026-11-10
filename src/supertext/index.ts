@@ -1,6 +1,6 @@
 /**
  * Supertext for this app: the vendored Supertext SDK (src/vendor/supertext-sdk,
- * https://github.com/Supertext/Supertext-API-SDK-and-Guide; the API in its `v1`
+ * https://github.com/Supertext/Supertext-API-SDK-Guide; the API in its `v1`
  * namespace) with this app's defaults. The SDK handles the protocol: auth header,
  * multipart upload, HTTP 429 retries, polling, cleanup, packing texts into
  * documents, the language list and the API key check. Version reports are Supertext
