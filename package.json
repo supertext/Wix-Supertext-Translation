@@ -22,8 +22,8 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.6",
-    "hono": "^4.13.16",
-    "node-html-parser": "^9.0.6",
+    "hono": "^4.13.17",
+    "node-html-parser": "^9.0.7",
     "pg": "^8.23.1"
   },
   "devDependencies": {
