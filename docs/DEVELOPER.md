@@ -153,7 +153,7 @@ Protocol: [Commando-Center-Supertext-Translation](https://github.com/Supertext/C
 
 ## Local development
 
-Requirements: Node.js 22.12+ (CI runs the tests on Node 22, 24 and 26; the Docker image uses Node 22). No Wix account needed for most work: the stand-ins answer like the Wix and Supertext APIs for a sample site (`tests/standin/seed.ts`: a Swiss chocolate shop in English with German, French and Italian, two products, a category, a blog post; `samples.json` holds human translations of its texts).
+Requirements: Node.js 22.12+ (CI runs the tests on Node 22, 24 and 26; the Docker image uses Node 26). No Wix account needed for most work: the stand-ins answer like the Wix and Supertext APIs for a sample site (`tests/standin/seed.ts`: a Swiss chocolate shop in English with German, French and Italian, two products, a category, a blog post; `samples.json` holds human translations of its texts).
 
 ```bash
 npm install
