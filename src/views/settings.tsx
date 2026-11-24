@@ -30,6 +30,8 @@ export interface SettingsPageProps {
   reports: { enabled: boolean; forced: boolean };
   saved?: boolean;
   invalidCodes?: string;
+  /** The result of "Send configuration to Supertext" (after the redirect). */
+  configResult?: 'sent' | 'off' | 'failed';
 }
 
 export function SettingsPage(props: SettingsPageProps) {
@@ -181,6 +183,18 @@ export function SettingsPage(props: SettingsPageProps) {
           {props.reports.forced && (
             <p class="muted">{t.t(props.reports.enabled ? 'settings.reports.forcedOn' : 'settings.reports.forcedOff')}</p>
           )}
+          {/* A button of the separate form below (forms can't be nested). */}
+          <p class="actions" data-supertext-send-configuration>
+            <button type="submit" form="config-form" disabled={!props.reports.enabled}>
+              {t.t('settings.config.button')}
+            </button>
+            {props.configResult && (
+              <span class={props.configResult === 'off' ? 'muted' : undefined} role="status">
+                {t.t(props.configResult === 'sent' ? 'settings.config.sent' : props.configResult === 'off' ? 'settings.config.off' : 'settings.config.failed')}
+              </span>
+            )}
+          </p>
+          <p class="help">{t.t('settings.config.help')}</p>
         </section>
 
         <div class="actions">
@@ -188,6 +202,10 @@ export function SettingsPage(props: SettingsPageProps) {
             {t.t('settings.save')}
           </button>
         </div>
+      </form>
+
+      <form method="post" action="/settings/configuration" id="config-form" hidden>
+        <input type="hidden" name="instance" value={ctx.instance} />
       </form>
 
       <section class="card about">

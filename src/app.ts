@@ -9,7 +9,7 @@ import { createSupertextClient, effectiveReviewUrl, type ApiKeyCheck } from './s
 import type { SiteSettings, Store } from './store/store.js';
 import { exportFile, importFile, refuseLargeUpload } from './translation/files.js';
 import { startJob } from './translation/jobs.js';
-import { supportedSource, supportedTarget } from './translation/language-codes.js';
+import { sourceCodeOf, supportedSource, supportedTarget, targetCodeOf } from './translation/language-codes.js';
 import { entityPage, siteLanguages, translatableSchemas, type SiteLanguages } from './translation/site.js';
 import { ImportSummaryPanel } from './views/files.js';
 import { JobPanel } from './views/job.js';
@@ -294,6 +294,7 @@ export function createApp(deps: AppDeps) {
         reports: { enabled: reporting.enabled(settings), forced: reporting.forcedByServer },
         saved: c.req.query('saved') === '1',
         invalidCodes: c.req.query('invalid') || undefined,
+        configResult: (['sent', 'off', 'failed'] as const).find((r) => r === c.req.query('config')),
       })),
     );
   });
@@ -339,6 +340,34 @@ export function createApp(deps: AppDeps) {
     await reporting.run(auth.instance.instanceId, 'afterSettingsSaved');
     const ctx: PageContext = { t, instance: signed, page: 'settings' };
     return c.redirect(appUrl(ctx, '/settings', { saved: '1', invalid: invalid.join(', ') || undefined }), 303);
+  });
+
+  // "Send configuration to Supertext": the site's languages with their Supertext codes, for Supertext support.
+  app.post('/settings/configuration', async (c) => {
+    const form = await c.req.parseBody();
+    const signed = String(form.instance ?? '');
+    const auth = pageAuth(c, signed);
+    if (auth instanceof Response) return auth;
+    const t = localeOf(c, String(form.locale ?? ''));
+    const instanceId = auth.instance.instanceId;
+    const settings = await store.getSettings(instanceId);
+    let outcome: 'sent' | 'off' | 'failed' = 'off';
+    if (reporting.enabled(settings)) {
+      outcome = 'failed';
+      try {
+        const languages = await siteLanguages(wixFor(instanceId));
+        const mapping = [
+          { code: languages.primary.id, supertext: sourceCodeOf(languages.primary.id, settings.languageCodes) },
+          ...languages.targets.map((locale) => ({ code: locale.id, supertext: targetCodeOf(locale.id, settings.languageCodes) })),
+        ];
+        const result = await reporting.sendConfiguration(instanceId, mapping);
+        if (result?.sent) outcome = 'sent';
+      } catch {
+        // The site's languages couldn't be read: nothing sent.
+      }
+    }
+    const ctx: PageContext = { t, instance: signed, page: 'settings' };
+    return c.redirect(appUrl(ctx, '/settings', { config: outcome }), 303);
   });
 
   /** Wix webhooks: forget a site's settings when the app is removed. */

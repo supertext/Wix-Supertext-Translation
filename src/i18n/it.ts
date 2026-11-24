@@ -137,6 +137,11 @@ export const it: Messages = {
   "settings.reports.forcedOff":
     "Disattivato per tutti i siti sul server dell'app (SUPERTEXT_VERSION_REPORTS).",
   "settings.reports.forcedOn": "Attivato per tutti i siti sul server dell'app (SUPERTEXT_VERSION_REPORTS).",
+  "settings.config.button": "Invia la configurazione a Supertext",
+  "settings.config.help": "Invia a Supertext le lingue del sito con la rispettiva lingua Supertext, così il supporto Supertext può aiutarLa meglio. Non viene inviato nient’altro.",
+  "settings.config.sent": "Configurazione inviata.",
+  "settings.config.off": "Le informazioni sulla versione sono disattivate: non è stato inviato nulla.",
+  "settings.config.failed": "Non è stato possibile inviare la configurazione. Riprovi più tardi.",
   "settings.save": "Salva",
   "settings.about.heading": "Informazioni",
   "settings.about.version": "Supertext Translation per Wix, versione {version}",

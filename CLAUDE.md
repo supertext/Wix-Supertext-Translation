@@ -65,7 +65,7 @@ The demo is a Wix site set up by hand (see `docs/DEVELOPER.md` → *Demo*): Wix 
 
 ## Screenshots rule (always)
 
-The user guide and installation guide include screenshots, taken by `npm run docs:screenshots` (Playwright, `tests/docs/screenshots.ts`) against the stand-in Wix and Supertext APIs, which return real translations of the sample site (`tests/standin/samples.json`), stored in `docs/images/` at 1× scale with alt text, and regenerated in the same commit whenever the UI they show changes. The README's demo movie: `npm run docs:movie` (`tests/docs/movie.ts`, shared kit in `tests/docs/movie/`); the install and configuration movie: `npm run docs:movie:install` (`tests/docs/movie-install.ts`, same kit, MP4 only). Screenshots of Wix's own screens (language setup, Translation Manager) are added from the demo site once it exists. No secrets, no customer data, no local URLs.
+The user guide and installation guide include screenshots, taken by `npm run docs:screenshots` (Playwright, `tests/docs/screenshots.ts`) against the stand-in Wix API and the real Supertext API (CI secret `SUPERTEXT_API_KEY`; the Supertext stand-in, which returns translations of the sample site from `tests/standin/samples.json`, only without a key), stored in `docs/images/` at 1× scale with alt text, and regenerated in the same commit whenever the UI they show changes. The README's demo movie: `npm run docs:movie` (`tests/docs/movie.ts`, shared kit in `tests/docs/movie/`); the install and configuration movie: `npm run docs:movie:install` (`tests/docs/movie-install.ts`, same kit, MP4 only). Screenshots of Wix's own screens (language setup, Translation Manager) are added from the demo site once it exists. No secrets, no customer data, no local URLs.
 
 ## Shared Supertext protocol
 

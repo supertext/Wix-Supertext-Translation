@@ -1,7 +1,9 @@
 /**
  * Screenshots of the app's dashboard pages for the guides (docs/images), taken
- * with Playwright against the stand-in Wix and Supertext APIs, which return
- * real translations of the sample site (tests/standin/samples.json).
+ * with Playwright against the stand-in Wix API and the real Supertext API when
+ * SUPERTEXT_API_KEY is set (CI's secret), so the guides show real translations.
+ * Without a key the Supertext stand-in translates (the sample site's texts from
+ * tests/standin/samples.json). Version reports always go to the stand-in.
  *
  *   npm run docs:screenshots
  *
@@ -20,6 +22,7 @@ import { MemoryStore } from '../../src/store/store.js';
 import { formatTime } from '../../src/views/layout.js';
 import { createSupertextStandin } from '../standin/supertext.js';
 import { createWixStandin } from '../standin/wix.js';
+import { LIVE_BASE_URL } from '../../src/vendor/supertext-sdk/v1/index.js';
 
 const out = new URL('../../docs/images/', import.meta.url).pathname;
 mkdirSync(out, { recursive: true });
@@ -41,14 +44,17 @@ async function main() {
   const supertextUrl = await listen((request) => supertext.handle(request));
   // Translation review: a second stand-in address, never Supertext's real review service.
   const reviewUrl = await listen((request) => supertext.handle(request));
+  // CI: the real Supertext API with the secret (typed into the key field below, a password field
+  // that never shows it). The review service is pointed at the API itself, so Translation review
+  // languages are translated for real too, without involving the review service.
+  const liveKey = process.env.SUPERTEXT_API_KEY?.trim() ?? '';
   const store = new MemoryStore();
   const app = createApp({
     config: loadConfig({
       WIX_APP_ID: 'screenshots',
       WIX_APP_SECRET: SECRET,
       WIX_API_BASE: wixUrl,
-      SUPERTEXT_API_ENDPOINT: `${supertextUrl}/v1/`,
-      SUPERTEXT_REVIEW_URL: `${reviewUrl}/v1/`,
+      ...(liveKey ? { SUPERTEXT_REVIEW_URL: LIVE_BASE_URL } : { SUPERTEXT_API_ENDPOINT: `${supertextUrl}/v1/`, SUPERTEXT_REVIEW_URL: `${reviewUrl}/v1/` }),
       // Version reports go to the stand-in, never to the live Commando Center.
       SUPERTEXT_REPORT_URL: `${supertextUrl}/report`,
     }),
@@ -83,7 +89,7 @@ async function main() {
   wix.locales.splice(-2);
 
   await page.goto(url('/settings'));
-  await page.fill('input[name="apiKey"]', 'Supertext-Auth-Key 0123456789abcdef');
+  await page.fill('input[name="apiKey"]', liveKey || 'Supertext-Auth-Key 0123456789abcdef');
   await page.click('button.primary');
   await page.waitForSelector('.key-check[data-status="ok"]');
   await page.click('#test-button');
@@ -102,7 +108,7 @@ async function main() {
 
   // Results after translating.
   await page.click('#translate-button');
-  await page.waitForSelector('.job .notice.success', { timeout: 30_000 });
+  await page.waitForSelector('.job .notice.success', { timeout: 300_000 });
   await shot('translate-results', page.locator('.job'));
 
   // The list afterwards: translated products.

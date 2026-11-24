@@ -123,6 +123,23 @@ describe('reporting glue', () => {
     await expect(r.run(INSTANCE_ID, 'onRequest')).resolves.toBeNull();
   });
 
+  it('Send configuration: the language mapping in one extensions report (no plugins), nothing when off', async () => {
+    const languages = [
+      { code: 'en', supertext: 'en' },
+      { code: 'de', supertext: 'de-DE' },
+      { code: 'en-ie', supertext: null },
+    ];
+    const { r, supertext } = reporting();
+    expect(await r.sendConfiguration(INSTANCE_ID, languages)).toMatchObject({ event: 'extensions', sent: true });
+    expect(supertext.reports).toHaveLength(1);
+    expect(supertext.reports[0]).toMatchObject({ event: 'extensions', extensions: [], languages });
+    expect(JSON.stringify(supertext.reports[0])).not.toContain('server-key');
+
+    const off = reporting({ env: '0' });
+    expect(await off.r.sendConfiguration(INSTANCE_ID, languages)).toBeNull();
+    expect(off.supertext.reports).toHaveLength(0);
+  });
+
   it('follows SUPERTEXT_VERSION_REPORTS over the site setting', () => {
     expect(reporting({ env: '0' }).r.enabled({ versionReports: true })).toBe(false);
     expect(reporting({ env: 'on' }).r.enabled({ versionReports: false })).toBe(true);

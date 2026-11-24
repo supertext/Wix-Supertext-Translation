@@ -57,7 +57,7 @@ Open **Supertext Translation → Settings** in the dashboard:
 
 No Supertext account yet? Create one at [supertext.com](https://www.supertext.com/person/en/account/signin). Generate your API key at [supertext.com → Integrations → API](https://www.supertext.com/en/integrations/api) (requires the Admin role).
 
-<img src="images/settings.png" alt="Supertext settings in the Wix dashboard: the saved API key with links to create a Supertext account and generate the key, the message API key checked: the connection to Supertext works. with the time of the last check, Test connection, form of address, Mark translations as ready to publish, the Supertext language for English (main language), German, French and Italian (Switzerland) with a Translation review checkbox for each target language (German ticked), Send version information to Supertext, and the app version 0.1.0" width="720">
+<img src="images/settings.png" alt="Supertext settings in the Wix dashboard: the saved API key with links to create a Supertext account and generate the key, the message API key checked: the connection to Supertext works. with the time of the last check, Test connection, form of address, Mark translations as ready to publish, the Supertext language for English (main language), German, French and Italian (Switzerland) with a Translation review checkbox for each target language (German ticked), Send version information to Supertext with the Send configuration to Supertext button, and the app version 0.1.0" width="720">
 
 Until a key is saved, the translate page asks for one:
 
@@ -118,6 +118,8 @@ Under **Settings → Languages** every site language has a combo box with Supert
 - whether an API key is set and the result of the last key check (*ok*, *invalid*, *missing*, *unreachable* or *error*, with its time and Supertext's HTTP status).
 
 No content, no API key and no personal data are sent. As a hosted app it has no callback address (no ping). Turn the checkbox off and save to stop the reports for your site; the key check on saving still runs. Supertext can also turn reports off for all sites on the app's server (`SUPERTEXT_VERSION_REPORTS=0`); the setting then says so.
+
+**Send configuration to Supertext** (on the settings page): when you contact Supertext support, this button sends, in one report, your site's languages with the Supertext language each is sent as. Being a hosted app, there are no plugins to list. Nothing else is sent, and nothing at all while version information is off.
 
 ## Translation review
 

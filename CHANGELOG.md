@@ -4,6 +4,9 @@ All notable changes to Supertext Translation for Wix.
 
 ## Unreleased
 
+- Added: *Send configuration to Supertext* on the settings page: sends the site's language mapping to Supertext support in one report (Supertext Plugin Health 0.4.0). Nothing is sent while version reports are off.
+- Changed: version reports go to `https://pluginhealth.supertext.com` (Supertext Plugin Health 0.4.0).
+- Changed: the docs screenshots show real Supertext translations: CI takes them with the live API (secret `SUPERTEXT_API_KEY`); the Supertext stand-in translates only without the key. Version reports still go to the stand-in.
 - Changed: the Docker image (Railway) runs on Node.js 26, the current LTS (was Node 22); running the app still needs Node.js 22.12 or later. Dependencies updated (Hono 4.13.19, @hono/node-server 2.1.9); end-to-end tests on PostgreSQL 18.
 - Docs: demo movie in the README (`docs/images/demo.gif`, recorded against the stand-ins with `npm run docs:movie`; the MP4 version, not committed, is narrated with the Piper voice “alba”) and an install and configuration movie (`npm run docs:movie:install`: the app in the Wix dashboard, the API key, the language mapping, *Save* with the key check, *Test connection*; narrated MP4, not committed).
 - Added: the Supertext support form is linked in the README, the user guide and GitHub's "New issue" page.

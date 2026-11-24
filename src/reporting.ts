@@ -24,6 +24,7 @@ import {
   reportsEnabled,
   type FetchLike,
   type KeyChecker,
+  type LanguageMapping,
   type ReporterOptions,
   type ReporterResult,
 } from './vendor/supertext-plugin-health/index.js';
@@ -138,6 +139,35 @@ export class Reporting {
     return task;
   }
 
+  /**
+   * "Send configuration to Supertext" (Settings): the site's language mapping in one `extensions`
+   * report (a hosted app has no plugins of its own to list, so the list is empty), sent now (also
+   * within the hour after a failed report). Null while version reports are off or without a site
+   * URL. Never throws.
+   */
+  sendConfiguration(instanceId: string, languages: LanguageMapping[]): Promise<ReportResult | null> {
+    const previous = this.queues.get(instanceId) ?? Promise.resolve();
+    const task = previous.then(async () => {
+      try {
+        const settings = await this.deps.store.getSettings(instanceId);
+        const siteUrl = await this.siteUrl(instanceId);
+        if (siteUrl === null || !this.enabled(settings)) return null;
+        const state = reporterState(await this.deps.store.getReporterState(instanceId));
+        const result = await this.reporter(siteUrl, settings, languages).sendExtensions(state, []);
+        await this.deps.store.saveReporterState(instanceId, result.state);
+        return result as ReportResult;
+      } catch (error) {
+        this.deps.log?.(`Supertext: configuration not sent: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+      }
+    });
+    this.queues.set(instanceId, task);
+    void task.finally(() => {
+      if (this.queues.get(instanceId) === task) this.queues.delete(instanceId);
+    });
+    return task;
+  }
+
   /** For page views and API calls: starts after the current request and runs in the background. */
   inBackground(instanceId: string, action: ReportAction, httpStatus?: number): void {
     const task = new Promise<void>((resolve) => setImmediate(resolve)).then(() => this.run(instanceId, action, httpStatus));
@@ -150,7 +180,7 @@ export class Reporting {
     while (this.pending.size > 0) await Promise.all([...this.pending]);
   }
 
-  private reporter(siteUrl: string | null, settings: SiteSettings): InstallationReporter {
+  private reporter(siteUrl: string | null, settings: SiteSettings, languages?: LanguageMapping[]): InstallationReporter {
     const { config } = this.deps;
     return new InstallationReporter({
       // Without a site URL the key is still checked, but nothing is reported.
@@ -161,6 +191,7 @@ export class Reporting {
       sdkVersion: SDK_VERSION,
       callbackUrl: null, // hosted app: no ping endpoint
       keyChecker: this.keyChecker(),
+      ...(languages ? { languages: () => languages } : {}),
       ...(config.reportUrl ? { reportUrl: config.reportUrl } : {}),
       ...(this.deps.fetch ? { fetch: this.deps.fetch as FetchLike } : {}),
       ...this.deps.reporterOverrides,
