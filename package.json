@@ -1,6 +1,6 @@
 {
   "name": "wix-supertext-translation",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Supertext AI translation for Wix: translate Wix Stores products and other Wix Multilingual content from the Wix dashboard.",
   "license": "MIT",
   "private": true,
