@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { signInstance, verifyInstance } from '../src/auth/instance.js';
+import { INSTANCE_MAX_AGE_MS, signInstance, verifyInstance } from '../src/auth/instance.js';
 
 describe('signed app instance', () => {
   const secret = 'secret';
@@ -21,6 +21,15 @@ describe('signed app instance', () => {
 
   it('keeps anonymous visitors out', () => {
     expect(() => verifyInstance(signInstance({ instanceId: 'abc', aid: 'visitor' }, secret), secret)).toThrow(/Anonymous/);
+  });
+
+  it('opens the app for a day after Wix signed the instance, not longer', () => {
+    const now = Date.parse('2026-12-01T09:00:00Z');
+    const at = (offsetMs: number) => signInstance({ instanceId: 'abc', uid: 'u', signDate: new Date(now + offsetMs).toISOString() }, secret);
+    expect(verifyInstance(at(-(INSTANCE_MAX_AGE_MS - 60_000)), secret, now)).toMatchObject({ instanceId: 'abc' });
+    expect(() => verifyInstance(at(-(INSTANCE_MAX_AGE_MS + 60_000)), secret, now)).toThrow(/expired/);
+    expect(() => verifyInstance(at(10 * 60_000), secret, now)).toThrow(/expired/);
+    expect(() => verifyInstance(signInstance({ instanceId: 'abc', uid: 'u', signDate: 'soon' }, secret), secret, now)).toThrow(/expired/);
   });
 
   it('needs the app secret', () => {

@@ -82,6 +82,7 @@ jobs:
       - name: App secret for this run only
         run: |
           value="$(openssl rand -hex 16)"
+          # nosemgrep: unsafe-add-mask-workflow-command -- $value is random hex from openssl, not input
           echo "::add-mask::$value"
           echo "WIX_APP_SECRET=$value" >> "$GITHUB_ENV"
 

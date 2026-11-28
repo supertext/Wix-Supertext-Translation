@@ -122,7 +122,7 @@ console.log(
 // The dashboard page as Wix opens it: a signed instance in the URL. The app has no own
 // accounts; Wix decides who may open the dashboard (see "Demo" in docs/DEVELOPER.md).
 const instance = signInstance(
-  { instanceId: 'e2e00000-0000-4000-8000-000000000001', uid: 'e2e-editor', permissions: 'OWNER', siteOwnerId: 'e2e-owner' },
+  { instanceId: 'e2e00000-0000-4000-8000-000000000001', uid: 'e2e-editor', permissions: 'OWNER', siteOwnerId: 'e2e-owner', signDate: new Date().toISOString() },
   SECRET,
 );
 const url = (params: Record<string, string> = {}) => `${APP}/?${new URLSearchParams({ instance, locale: 'en', ...params })}`;
@@ -189,6 +189,14 @@ const find = (schemaId: string, entityId: string, locale: string) =>
 const expectedItems = (schema: Schema) => sources.filter((content) => content.schemaId === schema.id).length * targets.length;
 
 try {
+  // --- A day-old instance (a copied or leaked dashboard URL) no longer opens the app -------------
+  const old = signInstance(
+    { instanceId: 'e2e00000-0000-4000-8000-000000000001', uid: 'e2e-editor', permissions: 'OWNER', siteOwnerId: 'e2e-owner', signDate: new Date(Date.now() - 25 * 3600 * 1000).toISOString() },
+    SECRET,
+  );
+  const stale = await fetch(`${APP}/?${new URLSearchParams({ instance: old, locale: 'en' })}`);
+  check('expired instance: refused', stale.status === 401, `HTTP ${stale.status}`);
+
   // --- First translation ---------------------------------------------------------------------
   for (const schema of wix.schemas) {
     const run = await translateAll(page, schema, 'first-run', false);

@@ -55,7 +55,7 @@ export async function startDemo({ statusDelayMs = 0 } = {}) {
   });
   app.use('/static/*', serveStatic({ root: new URL('../../../public/', import.meta.url).pathname, rewriteRequestPath: (path) => path.replace(/^\/static/, '') }));
   const appUrl = await listen(app.fetch, Number(process.env.MOVIE_PORT || 8798));
-  const instance = signInstance({ instanceId: INSTANCE, uid: 'editor', permissions: 'OWNER', siteOwnerId: 'editor' }, SECRET);
+  const instance = signInstance({ instanceId: INSTANCE, uid: 'editor', permissions: 'OWNER', siteOwnerId: 'editor', signDate: new Date().toISOString() }, SECRET);
   const url = (path: string, params: Record<string, string> = {}) =>
     `${appUrl}${path}?${new URLSearchParams({ instance, locale: 'en', ...params })}`;
   return { url, wix, store };

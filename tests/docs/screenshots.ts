@@ -62,7 +62,7 @@ async function main() {
   });
   app.use('/static/*', serveStatic({ root: new URL('../../public/', import.meta.url).pathname, rewriteRequestPath: (path) => path.replace(/^\/static/, '') }));
   const appUrl = await listen(app.fetch);
-  const instance = signInstance({ instanceId: INSTANCE, uid: 'editor', permissions: 'OWNER', siteOwnerId: 'editor' }, SECRET);
+  const instance = signInstance({ instanceId: INSTANCE, uid: 'editor', permissions: 'OWNER', siteOwnerId: 'editor', signDate: new Date().toISOString() }, SECRET);
   const url = (path: string, params: Record<string, string> = {}) =>
     `${appUrl}${path}?${new URLSearchParams({ instance, locale: 'en', ...params })}`;
 

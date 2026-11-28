@@ -26,7 +26,7 @@ serve({ fetch: (request) => wix.handle(request), port: wixPort, hostname: '127.0
 serve({ fetch: (request) => supertext.handle(request), port: supertextPort, hostname: '127.0.0.1' });
 
 const instance = signInstance(
-  { instanceId: '7c3e1d2a-5b4f-4e6a-9c8d-0f1e2d3c4b5a', uid: 'standin-user', permissions: 'OWNER', siteOwnerId: 'standin-user' },
+  { instanceId: '7c3e1d2a-5b4f-4e6a-9c8d-0f1e2d3c4b5a', uid: 'standin-user', permissions: 'OWNER', siteOwnerId: 'standin-user', signDate: new Date().toISOString() },
   secret,
 );
 console.log(`Stand-in Wix API on http://127.0.0.1:${wixPort}, stand-in Supertext API on http://127.0.0.1:${supertextPort}/v1/ (reports: /report)`);

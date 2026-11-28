@@ -29,11 +29,28 @@ export interface AppDeps {
   reporting?: Reporting;
 }
 
-/** Wix shows dashboard pages in an iframe on these hosts. */
-const FRAME_ANCESTORS = "frame-ancestors 'self' https://manage.wix.com https://*.wix.com https://*.wixstudio.com";
+/**
+ * Content-Security-Policy of every page: scripts, styles, fonts and images only from the app itself
+ * (images also data:, for CSS icons). No inline scripts, no plugins, no other <base>, forms only to
+ * the app, and frames only in Wix's dashboard (Wix shows dashboard pages in an iframe on these hosts).
+ */
+export const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'self' https://manage.wix.com https://*.wix.com https://*.wixstudio.com",
+].join('; ');
+export const PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=(), usb=()';
 
 export function createApp(deps: AppDeps) {
   const { config, store } = deps;
+  const secure = config.appUrl.startsWith('https://');
   const app = new Hono();
 
   const wixFor = (instanceId: string) =>
@@ -70,9 +87,15 @@ export function createApp(deps: AppDeps) {
 
   app.use('*', async (c, next) => {
     await next();
-    c.header('Content-Security-Policy', FRAME_ANCESTORS);
+    c.header('Content-Security-Policy', CONTENT_SECURITY_POLICY);
     c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
     c.header('X-Content-Type-Options', 'nosniff');
+    // The app needs no camera, microphone, location or other browser features.
+    c.header('Permissions-Policy', PERMISSIONS_POLICY);
+    // Browsers that saw the app over HTTPS never use plain HTTP for it again (for a year).
+    if (secure) c.header('Strict-Transport-Security', 'max-age=31536000');
+    // Pages show the site's live state: never from a cache (static files keep their own headers).
+    if (!c.req.path.startsWith('/static/')) c.header('Cache-Control', 'no-cache, private');
   });
 
   app.get('/health', (c) => c.text('ok'));
@@ -84,7 +107,7 @@ export function createApp(deps: AppDeps) {
     } catch (error) {
       console.warn('Supertext: rejected dashboard request:', (error as Error).message);
       const t = translator(resolveLocale(c.req.query('locale'), c.req.header('accept-language')));
-      return c.html(`<!doctype html><meta charset="utf-8"><p style="font-family:sans-serif">${t.t('error.session')}</p>`, 401);
+      return c.html(`<!doctype html><meta charset="utf-8"><p>${t.t('error.session')}</p>`, 401);
     }
   };
 

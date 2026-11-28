@@ -116,7 +116,7 @@ The result shows the reason for each item and language that fails; the other one
 | *Supertext returned 3 of 4 texts; nothing was saved for this item.* | Try that item again. |
 | *Too many requests to Supertext* | Wait a moment and click **Translate** again. Items already done show *Already translated, unchanged*. |
 | *Your Supertext translation limit is exceeded* | Your Supertext plan's volume is used up; tell your administrator. |
-| *This page has expired* | Open the app again from the dashboard's sidebar. |
+| *This page has expired* | Open the app again from the dashboard's sidebar. This also happens when the app's page has been open for more than a day. |
 
 ## Support
 

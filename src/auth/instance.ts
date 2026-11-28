@@ -28,8 +28,14 @@ export class InstanceError extends Error {
 
 const base64url = (buffer: Buffer): string => buffer.toString('base64url');
 
-/** Verifies and decodes a signed instance. Throws InstanceError if it isn't from Wix. */
-export function verifyInstance(signed: string | null | undefined, appSecret: string): AppInstance {
+/**
+ * How long a signed instance opens the app: Wix signs a fresh one (`signDate`) every time it opens
+ * the dashboard page, so an older one is a copied or leaked URL, or a tab left open for a day.
+ */
+export const INSTANCE_MAX_AGE_MS = 24 * 3600 * 1000;
+
+/** Verifies and decodes a signed instance. Throws InstanceError if it isn't from Wix or too old. */
+export function verifyInstance(signed: string | null | undefined, appSecret: string, now = Date.now()): AppInstance {
   if (!appSecret) {
     throw new InstanceError('WIX_APP_SECRET is not set.');
   }
@@ -57,6 +63,13 @@ export function verifyInstance(signed: string | null | undefined, appSecret: str
   }
   if (payload.aid && !payload.uid) {
     throw new InstanceError('Anonymous visitors cannot open the dashboard.');
+  }
+  // Wix always sets signDate; the signature covers it, so it can't be removed or changed.
+  if (payload.signDate !== undefined) {
+    const signed = Date.parse(payload.signDate);
+    if (Number.isNaN(signed) || now - signed > INSTANCE_MAX_AGE_MS || signed - now > 5 * 60 * 1000) {
+      throw new InstanceError('The instance has expired.');
+    }
   }
   return payload;
 }

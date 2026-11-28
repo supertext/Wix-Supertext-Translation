@@ -49,7 +49,7 @@ export function setup(env: Record<string, string> = {}) {
       new WixClient({ appId: config.wixAppId, appSecret: config.wixAppSecret, instanceId, apiBase: config.wixApiBase, fetch: fetchFn }).siteInfo(),
   });
   const app = createApp({ config, store, fetch: fetchFn, reporting, onJob: (done) => jobs.push(done) });
-  const instance = signInstance({ instanceId: INSTANCE_ID, uid: 'user-1', permissions: 'OWNER', siteOwnerId: 'user-1' }, APP_SECRET);
+  const instance = signInstance({ instanceId: INSTANCE_ID, uid: 'user-1', permissions: 'OWNER', siteOwnerId: 'user-1', signDate: new Date().toISOString() }, APP_SECRET);
   const request = (path: string, init: RequestInit = {}) =>
     app.request(path, { ...init, headers: { 'X-Wix-Instance': instance, ...(init.headers ?? {}) } });
   const page = (path: string, params: Record<string, string> = {}) =>

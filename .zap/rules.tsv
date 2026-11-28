@@ -1,0 +1,8 @@
+# ZAP alerts the app accepts (scripts/zap.sh, CI: security-scan.yml). Format: rule id, IGNORE/WARN/FAIL, reason.
+10202	IGNORE	(Absence of Anti-CSRF Tokens) forms carry Wix's signed instance (HMAC with the app secret, at most a day old); the app sets no cookies, so a cross-site form has nothing that acts for the site
+10031	IGNORE	(User Controllable HTML Element Attribute) ?locale= is mapped to en, de, fr or it; ?instance= is checked against Wix's signature before use; output is escaped
+10027	IGNORE	(Suspicious Comments) comments in the app's own script, nothing secret
+10104	IGNORE	(User Agent Fuzzer) informational
+10049	IGNORE	(Non-Storable Content) informational: pages are private (Cache-Control: no-cache, private) on purpose
+10024	IGNORE	(Sensitive Information in URL) ?instance=: Wix puts the signed instance in the dashboard page's URL (at most a day old here)
+90004	IGNORE	(Cross-Origin-Embedder-Policy) the page runs in Wix's dashboard frame and embeds nothing from other sites

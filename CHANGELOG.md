@@ -6,6 +6,7 @@ All notable changes to Supertext Translation for Wix.
 
 ### Security
 
+- A dashboard link (Wix's signed instance) opens the app for at most a day after Wix signed it, so a copied or leaked link stops working; reload the page from the Wix dashboard. Pages send a strict Content-Security-Policy, a `Permissions-Policy`, `Cache-Control: no-cache, private` and, over HTTPS, HSTS; stored API keys only accept full-length authentication tags; the container no longer runs as root. Found by the new security scans (Semgrep and OWASP ZAP, weekly and on every code change).
 - The Supertext API key set on the server (`SUPERTEXT_API_KEY`) is used only for the Wix site named by the new `SUPERTEXT_API_KEY_INSTANCE` (the demo site's app instance ID). Before, every site that installed the app and entered no key of its own translated on it. Without `SUPERTEXT_API_KEY_INSTANCE` the server's key is used for no site.
 
 ## 0.2.0 — 2026-11-26

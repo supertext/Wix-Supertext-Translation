@@ -155,7 +155,7 @@ In your site's dashboard, open **Apps → Manage Apps**, find **Supertext Transl
 | --- | --- |
 | *This file isn't a valid XLIFF or HTML translation file* / *This file wasn't exported by the Supertext app …* | The imported file is damaged, another kind of file, or the translator removed its metadata (HTML head, XLIFF file header). Export again and ask the translator to keep the structure. |
 | *The file is too large (at most 10 MB)* | Export fewer languages per file. |
-| *This page has expired. Reload it from the Wix dashboard.* | The app's page was opened outside the dashboard or the link is too old. Open it again from the sidebar. |
+| *This page has expired. Reload it from the Wix dashboard.* | The app's page was opened outside the dashboard, or its link is more than a day old (a tab left open, a copied link). Open it again from the sidebar. |
 | *Add your Supertext API key* / *No Supertext API key configured* | Enter the key under Settings (step 4). |
 | *Authentication failed* / *Supertext rejected the API key* | The key is wrong or revoked. Check that you copied the whole key, or generate a new one at [supertext.com → Integrations → API](https://www.supertext.com/en/integrations/api) (Admin role required). No Supertext account yet? Create one at [supertext.com](https://www.supertext.com/person/en/account/signin). |
 | *No API key is set yet* | Enter the key and save (step 4). |
