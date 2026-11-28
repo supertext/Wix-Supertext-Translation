@@ -5,7 +5,7 @@ import type { Politeness } from '../supertext/index.js';
 /** Per-site settings, keyed by the Wix app instance ID. */
 export interface SiteSettings {
   instanceId: string;
-  /** The site's own Supertext API key ('' = use SUPERTEXT_API_KEY). */
+  /** The site's own Supertext API key ('' = the server's, if SUPERTEXT_API_KEY_INSTANCE is this site). */
   apiKey: string;
   tone: Politeness;
   /** Mark translations as ready to publish (true) or leave them for review in the Translation Manager. */

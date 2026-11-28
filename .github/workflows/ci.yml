@@ -39,6 +39,7 @@ jobs:
           WIX_API_BASE: http://127.0.0.1:8766
           SUPERTEXT_API_ENDPOINT: http://127.0.0.1:8765/v1/
           SUPERTEXT_API_KEY: ci-key
+          SUPERTEXT_API_KEY_INSTANCE: 7c3e1d2a-5b4f-4e6a-9c8d-0f1e2d3c4b5a
           # Version reports go to the stand-in, never to the live Commando Center.
           SUPERTEXT_REPORT_URL: http://127.0.0.1:8765/report
           PORT: '8080'

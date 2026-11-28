@@ -114,7 +114,7 @@ jobs:
             -e PORT=8081 -e WIX_APP_ID=e2e -e WIX_APP_SECRET \
             -e WIX_API_BASE=http://127.0.0.1:8766 \
             -e DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/wix_supertext_e2e \
-            -e SUPERTEXT_API_KEY -e SUPERTEXT_VERSION_REPORTS=0 \
+            -e SUPERTEXT_API_KEY -e SUPERTEXT_API_KEY_INSTANCE=e2e00000-0000-4000-8000-000000000001 -e SUPERTEXT_VERSION_REPORTS=0 \
             wix-supertext-app
           timeout 120 sh -c "until curl -sf -o /dev/null $APP_URL/health; do sleep 2; done" || { docker logs app-live; exit 1; }
 

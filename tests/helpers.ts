@@ -33,6 +33,7 @@ export function setup(env: Record<string, string> = {}) {
     WIX_API_BASE: 'https://wixapis.test',
     SUPERTEXT_API_ENDPOINT: 'https://supertext.test/v1/',
     SUPERTEXT_API_KEY: 'server-key',
+    SUPERTEXT_API_KEY_INSTANCE: INSTANCE_ID,
     // Never the live Commando Center: reports go to the stand-in (supertext.reports).
     SUPERTEXT_REPORT_URL: 'https://supertext.test/report',
     // Languages with Translation review go to the review service's stand-in (same handler).

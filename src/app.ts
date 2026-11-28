@@ -1,7 +1,7 @@
 import { createVerify } from 'node:crypto';
 import { Hono, type Context } from 'hono';
 import { verifyInstance, type AppInstance } from './auth/instance.js';
-import type { Config } from './config.js';
+import { serverApiKey, type Config } from './config.js';
 import { errorInfo, LocalizedError, type ErrorInfo } from './i18n/error.js';
 import { resolveLocale, translator, type Translator } from './i18n/index.js';
 import { Reporting } from './reporting.js';
@@ -53,11 +53,11 @@ export function createApp(deps: AppDeps) {
    */
   const supertextFor = (settings: SiteSettings, review = false) =>
     createSupertextClient({
-      apiKey: settings.apiKey || config.supertextApiKey,
+      apiKey: settings.apiKey || serverApiKey(config, settings.instanceId),
       endpoint: review && reviewUrl ? reviewUrl : config.supertextEndpoint,
       fetch: deps.fetch,
     });
-  const hasKey = (settings: SiteSettings) => Boolean(settings.apiKey || config.supertextApiKey);
+  const hasKey = (settings: SiteSettings) => Boolean(settings.apiKey || serverApiKey(config, settings.instanceId));
   const reporting =
     deps.reporting ??
     new Reporting({
@@ -286,7 +286,7 @@ export function createApp(deps: AppDeps) {
       page(SettingsPage({
         ctx: { t, instance: auth.signed, page: 'settings' },
         settings,
-        serverKey: Boolean(config.supertextApiKey),
+        serverKey: Boolean(serverApiKey(config, settings.instanceId)),
         reviewAvailable: Boolean(reviewUrl),
         languages,
         languagesError,

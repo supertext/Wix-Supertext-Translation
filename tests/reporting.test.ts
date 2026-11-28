@@ -21,6 +21,7 @@ function reporting(options: { env?: string; siteInfo?: () => Promise<{ url?: str
   const r = new Reporting({
     config: {
       supertextApiKey: 'server-key',
+      supertextApiKeyInstance: INSTANCE_ID,
       supertextEndpoint: 'https://supertext.test/v1/',
       versionReports: options.env ?? '',
       reportUrl: 'https://center.test/report',

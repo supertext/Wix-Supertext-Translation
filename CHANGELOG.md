@@ -4,6 +4,10 @@ All notable changes to Supertext Translation for Wix.
 
 ## Unreleased
 
+### Security
+
+- The Supertext API key set on the server (`SUPERTEXT_API_KEY`) is used only for the Wix site named by the new `SUPERTEXT_API_KEY_INSTANCE` (the demo site's app instance ID). Before, every site that installed the app and entered no key of its own translated on it. Without `SUPERTEXT_API_KEY_INSTANCE` the server's key is used for no site.
+
 ## 0.2.0 — 2026-11-26
 
 - Added: Indonesian, Romanian, Thai and Vietnamese (`id`, `ro`, `th`, `vi`) can be chosen as Supertext languages, all with formal and informal address (Supertext SDK 0.7.0).

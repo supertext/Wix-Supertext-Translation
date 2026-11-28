@@ -23,7 +23,9 @@
   var schemaSelect = document.getElementById('schema-select');
   if (schemaSelect) {
     schemaSelect.addEventListener('change', function () {
-      window.location.href = schemaSelect.value;
+      // The options are the app's own page addresses: never follow anything else.
+      var target = String(schemaSelect.value);
+      if (target.charAt(0) === '/' && target.charAt(1) !== '/') window.location.href = target;
     });
   }
 

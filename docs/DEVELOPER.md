@@ -257,7 +257,8 @@ The service **Wix** in the Railway project *supertext-cms-demos* builds this rep
 | `WIX_PUBLIC_KEY` | from dev.wix.com → the app → Webhooks (for the *App Removed* webhook); optional |
 | `DATABASE_URL` | the shared Postgres service's URL with database `wix_supertext` (created on first start) |
 | `APP_ENCRYPTION_KEY` | random secret for stored API keys; optional (falls back to the app secret) |
-| `SUPERTEXT_API_KEY` | optional default key (the demo site) |
+| `SUPERTEXT_API_KEY` | optional: a key for **one** site only, the demo site named by `SUPERTEXT_API_KEY_INSTANCE` |
+| `SUPERTEXT_API_KEY_INSTANCE` | the app instance ID of the site that may use `SUPERTEXT_API_KEY` (`serverApiKey()` in `src/config.ts`); without it the server's key is used for no site (every other site enters its own key) |
 | `SUPERTEXT_REVIEW_URL` | optional: another review service than Supertext's for languages with *Translation review* (unset: `REVIEW_URL`); `''` turns review off for all sites. Only with the live API: leave it `''` when `SUPERTEXT_API_ENDPOINT` points at staging or testing |
 | `SUPERTEXT_VERSION_REPORTS` | optional: `0` turns version reports off for all sites (default: each site's setting, on) |
 | `SUPERTEXT_REPORT_URL` | never in production (Plugin Health's default is the live Commando Center); tests point it at a stand-in |
@@ -282,7 +283,7 @@ The demo is a Wix site, not a container: Wix hosts the site, Railway only the ap
 2. Wix Multilingual with German, French and Italian (Switzerland).
 3. A few products, a category and a blog post in English (the texts of `tests/standin/seed.ts`).
 4. **Accounts** (the demo accounts rule, as far as Wix allows): Supertext staff get access as **collaborators** with the *Admin (Co-Owner)* role; for tests and screenshots invite an editor-level collaborator with a role that can use apps (e.g. *Website Manager*). Wix accounts are personal and created by Wix, so they can't be created from Railway variables; passwords stay in Keeper, never in the repo or chat.
-5. Install the app (app dashboard → Test app → the demo site), then enter the API key under Settings or set `SUPERTEXT_API_KEY` on Railway.
+5. Install the app (app dashboard → Test app → the demo site), then enter the API key under Settings or set `SUPERTEXT_API_KEY` and `SUPERTEXT_API_KEY_INSTANCE` (the demo site's app instance ID) on Railway.
 
 ## Dependency updates
 

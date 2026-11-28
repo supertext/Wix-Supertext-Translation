@@ -54,6 +54,16 @@ describe('translate page', () => {
     expect(status).toBe(400);
     expect(json.error?.code).toBe('missing_api_key');
   });
+
+  it("uses the server's key only for the site SUPERTEXT_API_KEY_INSTANCE names", async () => {
+    for (const instance of ['another-instance', '']) {
+      const env = setup({ SUPERTEXT_API_KEY_INSTANCE: instance });
+      expect(await (await env.page('/')).text()).toContain('Add your Supertext API key');
+      const { status, json } = await startJob(env, { schemaId: PRODUCTS, entityIds: ['prod-praline-box'], locales: ['de-CH'] });
+      expect(status).toBe(400);
+      expect(json.error?.code).toBe('missing_api_key');
+    }
+  });
 });
 
 describe('translation job', () => {

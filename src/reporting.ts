@@ -16,7 +16,7 @@
  * Nothing here ever throws into a request or a translation; the API key is never
  * logged or sent (only its check result).
  */
-import type { Config } from './config.js';
+import { serverApiKey, type Config } from './config.js';
 import { apiKeyFingerprint, createSupertextClient, SDK_VERSION, type ApiKeyCheck } from './supertext/index.js';
 import {
   InstallationReporter,
@@ -47,7 +47,7 @@ export function siteUrlOf(info: SiteInfo | undefined): string | null {
 }
 
 export interface ReportingDeps {
-  config: Pick<Config, 'supertextApiKey' | 'supertextEndpoint' | 'versionReports' | 'reportUrl'>;
+  config: Pick<Config, 'supertextApiKey' | 'supertextApiKeyInstance' | 'supertextEndpoint' | 'versionReports' | 'reportUrl'>;
   store: Pick<Store, 'getSettings' | 'getReporterState' | 'saveReporterState'>;
   /** The site's details from Wix (published URL, site ID). */
   siteInfo: (instanceId: string) => Promise<SiteInfo>;
@@ -86,8 +86,8 @@ export class Reporting {
   }
 
   /** The API key reports and checks are about: the site's own, else the server's. */
-  apiKey(settings: Pick<SiteSettings, 'apiKey'>): string {
-    return settings.apiKey || this.deps.config.supertextApiKey;
+  apiKey(settings: Pick<SiteSettings, 'apiKey' | 'instanceId'>): string {
+    return settings.apiKey || serverApiKey(this.deps.config, settings.instanceId);
   }
 
   /** The latest stored key check of a site (settings page). */
